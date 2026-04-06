@@ -1,0 +1,195 @@
+{
+  "sections": {
+    "hero": true,
+    "about": true,
+    "services": true,
+    "references": true,
+    "careers": true,
+    "contact": true
+  },
+  "navbar": {
+    "logo": "PRISM",
+    "tagline": "Creative Studio",
+    "links": [
+      { "label": "Home", "href": "#hero" },
+      { "label": "About", "href": "#about" },
+      { "label": "Services", "href": "#services" },
+      { "label": "Work", "href": "#references" },
+      { "label": "Careers", "href": "#careers" },
+      { "label": "Contact", "href": "#contact" }
+    ]
+  },
+  "hero": {
+    "title": "We Create Brands That People Love",
+    "subtitle": "PRISM is a creative studio that blends strategy, design, and storytelling to build unforgettable brand experiences.",
+    "buttonText": "See Our Work",
+    "buttonLink": "#references",
+    "secondaryButtonText": "Let's Talk",
+    "secondaryButtonLink": "#contact",
+    "marquee": ["Branding", "Web Design", "Motion", "Strategy", "Identity", "Campaigns", "Digital", "Print"]
+  },
+  "about": {
+    "tagline": "Who We Are",
+    "title": "A Studio That Thinks Differently",
+    "description": "We're a collective of designers, strategists, and storytellers who believe that great brands are built at the intersection of creativity and purpose.\n\nSince 2019, we've helped over 80 brands find their voice, refine their identity, and connect with audiences in meaningful ways. From startups to household names, we bring the same energy and obsession with craft to every project.",
+    "imageUrl": "https://images.unsplash.com/photo-1542744094-3a31f272c490?w=800&q=80",
+    "highlights": [
+      { "number": "80+", "label": "Brands Created" },
+      { "number": "15", "label": "Award Wins" },
+      { "number": "6", "label": "Countries" },
+      { "number": "24", "label": "Team Members" }
+    ]
+  },
+  "services": {
+    "tagline": "What We Do",
+    "title": "Services That Move Brands Forward",
+    "items": [
+      {
+        "title": "Brand Strategy",
+        "description": "We dig deep into your market, audience, and competitors to craft a strategy that gives your brand an unfair advantage.",
+        "color": "rose",
+        "icon": "compass"
+      },
+      {
+        "title": "Visual Identity",
+        "description": "Logo, color system, typography, guidelines — everything you need to look consistent and professional everywhere.",
+        "color": "violet",
+        "icon": "palette"
+      },
+      {
+        "title": "Web Design & Dev",
+        "description": "Websites that convert. We design and build responsive, fast, SEO-optimized sites that reflect your brand perfectly.",
+        "color": "amber",
+        "icon": "browser"
+      },
+      {
+        "title": "Motion & Video",
+        "description": "From explainer videos to social media reels, we bring your brand to life with motion graphics and video production.",
+        "color": "emerald",
+        "icon": "film"
+      },
+      {
+        "title": "Social Media",
+        "description": "Content strategy, visual templates, campaign design — we help your brand own its social presence.",
+        "color": "sky",
+        "icon": "megaphone"
+      },
+      {
+        "title": "Print & Packaging",
+        "description": "Business cards, brochures, packaging — tactile brand touchpoints designed with the same care as digital.",
+        "color": "orange",
+        "icon": "package"
+      }
+    ]
+  },
+  "references": {
+    "tagline": "Selected Work",
+    "title": "Projects We're Proud Of",
+    "subtitle": "A curated selection of our favorite brand transformations",
+    "projects": [
+      {
+        "name": "Bloom Skincare",
+        "category": "Branding & Packaging",
+        "imageUrl": "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600&q=80",
+        "color": "bg-rose-500"
+      },
+      {
+        "name": "NordFi Banking",
+        "category": "Visual Identity & Web",
+        "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80",
+        "color": "bg-indigo-500"
+      },
+      {
+        "name": "Verde Kitchen",
+        "category": "Brand Strategy & Design",
+        "imageUrl": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80",
+        "color": "bg-emerald-500"
+      },
+      {
+        "name": "Pulse Fitness",
+        "category": "Motion & Social Media",
+        "imageUrl": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80",
+        "color": "bg-amber-500"
+      },
+      {
+        "name": "CloudStack SaaS",
+        "category": "Web Design & Development",
+        "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80",
+        "color": "bg-sky-500"
+      },
+      {
+        "name": "Maison Luxe",
+        "category": "Visual Identity & Print",
+        "imageUrl": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80",
+        "color": "bg-violet-500"
+      }
+    ],
+    "clients": [
+      { "name": "Spotify" },
+      { "name": "Airbnb" },
+      { "name": "Nike" },
+      { "name": "Slack" },
+      { "name": "Dropbox" },
+      { "name": "Netflix" }
+    ]
+  },
+  "careers": {
+    "tagline": "Join PRISM",
+    "title": "Make Work That Matters",
+    "subtitle": "We're always looking for curious, talented people who care about craft",
+    "culture": [
+      "4-day work week",
+      "Creative freedom",
+      "Conference budget",
+      "Studio in Istanbul",
+      "Remote Fridays",
+      "Team retreats"
+    ],
+    "positions": [
+      {
+        "title": "Senior Brand Designer",
+        "type": "Full-time",
+        "location": "Istanbul / Remote",
+        "description": "Lead visual identity projects for global clients. 5+ years brand design experience."
+      },
+      {
+        "title": "Motion Designer",
+        "type": "Full-time",
+        "location": "Istanbul",
+        "description": "Create animations, video content, and motion graphics for digital and social campaigns."
+      },
+      {
+        "title": "Frontend Developer",
+        "type": "Full-time",
+        "location": "Remote",
+        "description": "Build beautiful, performant websites. React/Next.js experience required."
+      }
+    ],
+    "formTitle": "Send Your Application",
+    "formSubtitle": "Show us what you've got — portfolio links welcome"
+  },
+  "contact": {
+    "tagline": "Say Hello",
+    "title": "Let's Start a Conversation",
+    "subtitle": "Got a project in mind? We'd love to hear about it.",
+    "phone": "+90 212 555 0400",
+    "email": "hello@prismstudio.co",
+    "address": "Karaköy Mah. Kemeraltı Cad. No:8, Beyoğlu, Istanbul, Turkey",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3010.0!2d28.97!3d41.02!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2str!4v1"
+  },
+  "footer": {
+    "description": "A creative studio that builds brands people remember.",
+    "copyright": "© 2026 PRISM Creative Studio. All rights reserved.",
+    "socialLinks": [
+      { "platform": "instagram", "url": "https://instagram.com" },
+      { "platform": "twitter", "url": "https://twitter.com" },
+      { "platform": "linkedin", "url": "https://linkedin.com" },
+      { "platform": "youtube", "url": "https://youtube.com" }
+    ],
+    "links": [
+      { "label": "Privacy Policy", "url": "/privacy" },
+      { "label": "KVKK", "url": "/kvkk" },
+      { "label": "Terms", "url": "/terms" }
+    ]
+  }
+}

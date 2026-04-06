@@ -1,0 +1,184 @@
+{
+  "sections": {
+    "type": "sectionToggles",
+    "label": "Enable / Disable Sections",
+    "fields": {
+      "hero": { "type": "toggle", "label": "Hero Slider", "default": true },
+      "about": { "type": "toggle", "label": "About Section", "default": true },
+      "services": { "type": "toggle", "label": "Services Section", "default": true },
+      "references": { "type": "toggle", "label": "References Section", "default": false },
+      "careers": { "type": "toggle", "label": "Careers Section", "default": false },
+      "contact": { "type": "toggle", "label": "Contact Section", "default": true }
+    }
+  },
+  "navbar": {
+    "type": "group",
+    "label": "Navigation Bar",
+    "fields": {
+      "logo": { "type": "text", "label": "Logo Text", "placeholder": "Brand Name" },
+      "links": {
+        "type": "array",
+        "label": "Nav Links",
+        "schema": {
+          "label": { "type": "text", "label": "Link Text" },
+          "href": { "type": "text", "label": "Link Target" }
+        }
+      }
+    }
+  },
+  "hero": {
+    "type": "group",
+    "label": "Hero Slider",
+    "fields": {
+      "slides": {
+        "type": "array",
+        "label": "Slides",
+        "maxItems": 5,
+        "schema": {
+          "image": { "type": "image", "label": "Slide Image" },
+          "title": { "type": "text", "label": "Slide Title" },
+          "subtitle": { "type": "textarea", "label": "Slide Subtitle" },
+          "buttonText": { "type": "text", "label": "Button Text" },
+          "buttonLink": { "type": "text", "label": "Button Link" }
+        }
+      }
+    }
+  },
+  "about": {
+    "type": "group",
+    "label": "About Section",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "description": { "type": "textarea", "label": "Description" },
+      "imageUrl": { "type": "image", "label": "Image" },
+      "features": {
+        "type": "array",
+        "label": "Feature Highlights",
+        "maxItems": 4,
+        "schema": {
+          "icon": { "type": "select", "label": "Icon", "options": ["rocket", "shield", "globe", "zap", "heart", "star"] },
+          "title": { "type": "text", "label": "Title" },
+          "description": { "type": "text", "label": "Description" }
+        }
+      }
+    }
+  },
+  "services": {
+    "type": "group",
+    "label": "Services Section",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "items": {
+        "type": "array",
+        "label": "Services",
+        "maxItems": 8,
+        "schema": {
+          "title": { "type": "text", "label": "Service Title" },
+          "description": { "type": "textarea", "label": "Description" },
+          "icon": { "type": "select", "label": "Icon", "options": ["lightbulb", "palette", "code", "mobile", "cloud", "brain", "chart", "shield"] },
+          "gradient": { "type": "select", "label": "Gradient Color", "options": ["from-violet-500 to-purple-600", "from-pink-500 to-rose-600", "from-cyan-500 to-blue-600", "from-emerald-500 to-teal-600", "from-amber-500 to-orange-600", "from-fuchsia-500 to-pink-600"] }
+        }
+      }
+    }
+  },
+  "references": {
+    "type": "group",
+    "label": "References / Clients",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "clients": {
+        "type": "array",
+        "label": "Client Logos",
+        "maxItems": 8,
+        "schema": {
+          "name": { "type": "text", "label": "Client Name" },
+          "logo": { "type": "image", "label": "Logo" }
+        }
+      },
+      "testimonials": {
+        "type": "array",
+        "label": "Testimonials",
+        "maxItems": 4,
+        "schema": {
+          "quote": { "type": "textarea", "label": "Quote" },
+          "author": { "type": "text", "label": "Author" },
+          "role": { "type": "text", "label": "Role" },
+          "avatar": { "type": "image", "label": "Avatar" }
+        }
+      }
+    }
+  },
+  "careers": {
+    "type": "group",
+    "label": "Careers Section",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "perks": {
+        "type": "array",
+        "label": "Company Perks",
+        "maxItems": 6,
+        "schema": { "value": { "type": "text", "label": "Perk" } }
+      },
+      "positions": {
+        "type": "array",
+        "label": "Job Positions",
+        "maxItems": 10,
+        "schema": {
+          "title": { "type": "text", "label": "Position" },
+          "type": { "type": "select", "label": "Type", "options": ["Full-time", "Part-time", "Contract", "Internship"] },
+          "location": { "type": "text", "label": "Location" },
+          "salary": { "type": "text", "label": "Salary Range" },
+          "description": { "type": "textarea", "label": "Description" }
+        }
+      },
+      "formTitle": { "type": "text", "label": "Form Title" },
+      "formSubtitle": { "type": "text", "label": "Form Subtitle" }
+    }
+  },
+  "contact": {
+    "type": "group",
+    "label": "Contact Section",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "phone": { "type": "text", "label": "Phone" },
+      "email": { "type": "text", "label": "Email" },
+      "address": { "type": "textarea", "label": "Address" },
+      "mapEmbedUrl": { "type": "text", "label": "Google Maps Embed URL" }
+    }
+  },
+  "footer": {
+    "type": "group",
+    "label": "Footer",
+    "fields": {
+      "description": { "type": "text", "label": "Footer Description" },
+      "copyright": { "type": "text", "label": "Copyright Text" },
+      "socialLinks": {
+        "type": "array",
+        "label": "Social Links",
+        "maxItems": 6,
+        "schema": {
+          "platform": { "type": "select", "label": "Platform", "options": ["twitter", "linkedin", "instagram", "facebook", "github", "youtube"] },
+          "url": { "type": "text", "label": "URL" }
+        }
+      },
+      "links": {
+        "type": "array",
+        "label": "Legal Links",
+        "maxItems": 6,
+        "schema": {
+          "label": { "type": "text", "label": "Text" },
+          "url": { "type": "text", "label": "URL" }
+        }
+      }
+    }
+  }
+}

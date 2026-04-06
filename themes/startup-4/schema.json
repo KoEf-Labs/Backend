@@ -1,0 +1,110 @@
+{
+  "sections": {
+    "type": "sectionToggles",
+    "label": "Enable / Disable Sections",
+    "fields": {
+      "hero": { "type": "toggle", "label": "Hero Section", "default": true },
+      "about": { "type": "toggle", "label": "About Section", "default": true },
+      "services": { "type": "toggle", "label": "Services", "default": true },
+      "references": { "type": "toggle", "label": "Portfolio / Work", "default": false },
+      "careers": { "type": "toggle", "label": "Careers", "default": false },
+      "contact": { "type": "toggle", "label": "Contact", "default": true }
+    }
+  },
+  "navbar": {
+    "type": "group", "label": "Navigation",
+    "fields": {
+      "logo": { "type": "text", "label": "Logo Text" },
+      "tagline": { "type": "text", "label": "Logo Tagline" },
+      "links": { "type": "array", "label": "Nav Links", "schema": { "label": { "type": "text", "label": "Text" }, "href": { "type": "text", "label": "Target" } } }
+    }
+  },
+  "hero": {
+    "type": "group", "label": "Hero Section",
+    "fields": {
+      "title": { "type": "text", "label": "Headline" },
+      "subtitle": { "type": "textarea", "label": "Subtitle" },
+      "buttonText": { "type": "text", "label": "Primary Button" },
+      "buttonLink": { "type": "text", "label": "Primary Link" },
+      "secondaryButtonText": { "type": "text", "label": "Secondary Button" },
+      "secondaryButtonLink": { "type": "text", "label": "Secondary Link" },
+      "marquee": { "type": "array", "label": "Scrolling Words", "maxItems": 10, "schema": { "value": { "type": "text", "label": "Word" } } }
+    }
+  },
+  "about": {
+    "type": "group", "label": "About Section",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "description": { "type": "textarea", "label": "Description" },
+      "imageUrl": { "type": "image", "label": "Image" },
+      "highlights": { "type": "array", "label": "Stats", "maxItems": 4, "schema": { "number": { "type": "text", "label": "Number" }, "label": { "type": "text", "label": "Label" } } }
+    }
+  },
+  "services": {
+    "type": "group", "label": "Services",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "items": { "type": "array", "label": "Services", "maxItems": 8, "schema": {
+        "title": { "type": "text", "label": "Title" },
+        "description": { "type": "textarea", "label": "Description" },
+        "icon": { "type": "select", "label": "Icon", "options": ["compass", "palette", "browser", "film", "megaphone", "package", "camera", "pen"] },
+        "color": { "type": "select", "label": "Color", "options": ["rose", "violet", "amber", "emerald", "sky", "orange", "indigo", "fuchsia"] }
+      }}
+    }
+  },
+  "references": {
+    "type": "group", "label": "Portfolio / Work",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "projects": { "type": "array", "label": "Projects", "maxItems": 8, "schema": {
+        "name": { "type": "text", "label": "Project Name" },
+        "category": { "type": "text", "label": "Category" },
+        "imageUrl": { "type": "image", "label": "Cover Image" },
+        "color": { "type": "select", "label": "Overlay Color", "options": ["bg-rose-500", "bg-indigo-500", "bg-emerald-500", "bg-amber-500", "bg-sky-500", "bg-violet-500", "bg-orange-500", "bg-fuchsia-500"] }
+      }},
+      "clients": { "type": "array", "label": "Client Names", "maxItems": 10, "schema": { "name": { "type": "text", "label": "Name" } } }
+    }
+  },
+  "careers": {
+    "type": "group", "label": "Careers",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "culture": { "type": "array", "label": "Culture Perks", "maxItems": 8, "schema": { "value": { "type": "text", "label": "Perk" } } },
+      "positions": { "type": "array", "label": "Positions", "maxItems": 10, "schema": {
+        "title": { "type": "text", "label": "Title" },
+        "type": { "type": "select", "label": "Type", "options": ["Full-time", "Part-time", "Contract", "Internship"] },
+        "location": { "type": "text", "label": "Location" },
+        "description": { "type": "textarea", "label": "Description" }
+      }},
+      "formTitle": { "type": "text", "label": "Form Title" },
+      "formSubtitle": { "type": "text", "label": "Form Subtitle" }
+    }
+  },
+  "contact": {
+    "type": "group", "label": "Contact",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "phone": { "type": "text", "label": "Phone" },
+      "email": { "type": "text", "label": "Email" },
+      "address": { "type": "textarea", "label": "Address" },
+      "mapEmbedUrl": { "type": "text", "label": "Google Maps Embed URL" }
+    }
+  },
+  "footer": {
+    "type": "group", "label": "Footer",
+    "fields": {
+      "description": { "type": "text", "label": "Description" },
+      "copyright": { "type": "text", "label": "Copyright" },
+      "socialLinks": { "type": "array", "label": "Social Links", "maxItems": 6, "schema": { "platform": { "type": "select", "label": "Platform", "options": ["instagram", "twitter", "linkedin", "youtube", "facebook", "github"] }, "url": { "type": "text", "label": "URL" } } },
+      "links": { "type": "array", "label": "Legal Links", "maxItems": 6, "schema": { "label": { "type": "text", "label": "Text" }, "url": { "type": "text", "label": "URL" } } }
+    }
+  }
+}

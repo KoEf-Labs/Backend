@@ -1,0 +1,108 @@
+{
+  "sections": {
+    "type": "sectionToggles", "label": "Enable / Disable Sections",
+    "fields": {
+      "hero": { "type": "toggle", "label": "Hero", "default": true },
+      "about": { "type": "toggle", "label": "About", "default": true },
+      "services": { "type": "toggle", "label": "Skills", "default": true },
+      "portfolio": { "type": "toggle", "label": "Portfolio", "default": true },
+      "careers": { "type": "toggle", "label": "Careers", "default": false },
+      "contact": { "type": "toggle", "label": "Contact", "default": true }
+    }
+  },
+  "navbar": {
+    "type": "group", "label": "Navigation",
+    "fields": {
+      "logo": { "type": "text", "label": "Name / Logo" },
+      "links": { "type": "array", "label": "Nav Links", "schema": { "label": { "type": "text", "label": "Text" }, "href": { "type": "text", "label": "Target" } } }
+    }
+  },
+  "hero": {
+    "type": "group", "label": "Hero",
+    "fields": {
+      "greeting": { "type": "text", "label": "Greeting", "placeholder": "Hi, I'm" },
+      "name": { "type": "text", "label": "Your Name" },
+      "title": { "type": "text", "label": "Title / Role" },
+      "subtitle": { "type": "textarea", "label": "Short Bio" },
+      "avatarUrl": { "type": "image", "label": "Profile Photo" },
+      "buttonText": { "type": "text", "label": "Primary Button" },
+      "buttonLink": { "type": "text", "label": "Primary Link" },
+      "secondaryButtonText": { "type": "text", "label": "Secondary Button" },
+      "secondaryButtonLink": { "type": "text", "label": "Secondary Link" },
+      "available": { "type": "toggle", "label": "Show Available Badge" }
+    }
+  },
+  "about": {
+    "type": "group", "label": "About",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "description": { "type": "textarea", "label": "Description" },
+      "imageUrl": { "type": "image", "label": "Image" },
+      "details": { "type": "array", "label": "Details", "maxItems": 6, "schema": { "label": { "type": "text", "label": "Label" }, "value": { "type": "text", "label": "Value" } } }
+    }
+  },
+  "services": {
+    "type": "group", "label": "Skills",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "items": { "type": "array", "label": "Skills", "maxItems": 8, "schema": {
+        "title": { "type": "text", "label": "Skill" },
+        "description": { "type": "text", "label": "Description" },
+        "icon": { "type": "select", "label": "Icon", "options": ["layers", "grid", "users", "component", "play", "code", "pen", "camera"] }
+      }}
+    }
+  },
+  "portfolio": {
+    "type": "group", "label": "Portfolio",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "projects": { "type": "array", "label": "Projects", "maxItems": 12, "schema": {
+        "title": { "type": "text", "label": "Title" },
+        "description": { "type": "text", "label": "Description" },
+        "category": { "type": "text", "label": "Category" },
+        "imageUrl": { "type": "image", "label": "Image" },
+        "year": { "type": "text", "label": "Year" }
+      }}
+    }
+  },
+  "careers": {
+    "type": "group", "label": "Careers",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "positions": { "type": "array", "label": "Positions", "maxItems": 6, "schema": {
+        "title": { "type": "text", "label": "Title" },
+        "type": { "type": "select", "label": "Type", "options": ["Full-time", "Part-time", "Contract", "Internship"] },
+        "location": { "type": "text", "label": "Location" },
+        "description": { "type": "textarea", "label": "Description" }
+      }},
+      "formTitle": { "type": "text", "label": "Form Title" },
+      "formSubtitle": { "type": "text", "label": "Form Subtitle" }
+    }
+  },
+  "contact": {
+    "type": "group", "label": "Contact",
+    "fields": {
+      "tagline": { "type": "text", "label": "Tagline" },
+      "title": { "type": "text", "label": "Title" },
+      "subtitle": { "type": "text", "label": "Subtitle" },
+      "phone": { "type": "text", "label": "Phone" },
+      "email": { "type": "text", "label": "Email" },
+      "address": { "type": "text", "label": "Address" },
+      "mapEmbedUrl": { "type": "text", "label": "Google Maps Embed URL" }
+    }
+  },
+  "footer": {
+    "type": "group", "label": "Footer",
+    "fields": {
+      "description": { "type": "text", "label": "Description" },
+      "copyright": { "type": "text", "label": "Copyright" },
+      "socialLinks": { "type": "array", "label": "Social Links", "maxItems": 6, "schema": { "platform": { "type": "select", "label": "Platform", "options": ["twitter", "linkedin", "github", "instagram", "youtube", "facebook"] }, "url": { "type": "text", "label": "URL" } } },
+      "links": { "type": "array", "label": "Legal Links", "maxItems": 4, "schema": { "label": { "type": "text", "label": "Text" }, "url": { "type": "text", "label": "URL" } } }
+    }
+  }
+}

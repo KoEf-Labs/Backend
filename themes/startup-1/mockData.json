@@ -1,0 +1,151 @@
+{
+  "sections": {
+    "hero": true,
+    "about": true,
+    "services": true,
+    "references": true,
+    "careers": true,
+    "contact": true
+  },
+  "navbar": {
+    "logo": "TechStart",
+    "links": [
+      { "label": "Home", "href": "#hero" },
+      { "label": "About", "href": "#about" },
+      { "label": "Services", "href": "#services" },
+      { "label": "References", "href": "#references" },
+      { "label": "Careers", "href": "#careers" },
+      { "label": "Contact", "href": "#contact" }
+    ]
+  },
+  "hero": {
+    "title": "Build the Future of Your Business",
+    "subtitle": "We help startups and enterprises launch digital products that users love. Fast, scalable, and beautiful.",
+    "buttonText": "Get Started",
+    "buttonLink": "#contact",
+    "imageUrl": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80"
+  },
+  "about": {
+    "title": "Who We Are",
+    "description": "We are a team of designers, developers, and strategists passionate about creating exceptional digital experiences. Founded in 2020, we have helped over 50 businesses bring their ideas to life with modern technology and thoughtful design.\n\nOur mission is to make professional web presence accessible to everyone — from solo entrepreneurs to growing teams.",
+    "imageUrl": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80",
+    "stats": [
+      { "value": "50+", "label": "Projects Delivered" },
+      { "value": "98%", "label": "Client Satisfaction" },
+      { "value": "24/7", "label": "Support" }
+    ]
+  },
+  "services": {
+    "title": "What We Offer",
+    "subtitle": "Everything you need to establish your online presence",
+    "items": [
+      {
+        "title": "Web Design",
+        "description": "Beautiful, conversion-focused websites tailored to your brand identity and business goals.",
+        "icon": "palette"
+      },
+      {
+        "title": "SEO Optimization",
+        "description": "Get discovered by your ideal customers with data-driven search engine optimization strategies.",
+        "icon": "search"
+      },
+      {
+        "title": "E-Commerce",
+        "description": "Sell products online with a fast, secure, and user-friendly shopping experience.",
+        "icon": "cart"
+      },
+      {
+        "title": "Cloud Hosting",
+        "description": "Reliable, blazing-fast hosting infrastructure that scales with your business.",
+        "icon": "cloud"
+      },
+      {
+        "title": "Mobile Apps",
+        "description": "Native and cross-platform mobile applications that engage your users on every device.",
+        "icon": "mobile"
+      },
+      {
+        "title": "Analytics",
+        "description": "Understand your audience with real-time analytics dashboards and actionable insights.",
+        "icon": "chart"
+      }
+    ]
+  },
+  "references": {
+    "title": "Trusted By",
+    "subtitle": "Companies that rely on our expertise",
+    "clients": [
+      { "name": "Acme Corp", "logo": "" },
+      { "name": "Globex Inc", "logo": "" },
+      { "name": "Initech", "logo": "" },
+      { "name": "Umbrella Co", "logo": "" },
+      { "name": "Stark Industries", "logo": "" },
+      { "name": "Wayne Enterprises", "logo": "" }
+    ],
+    "testimonials": [
+      {
+        "quote": "They transformed our online presence completely. Our conversions increased by 40% within the first month.",
+        "author": "Sarah Johnson",
+        "role": "CEO, Acme Corp"
+      },
+      {
+        "quote": "Professional, responsive, and incredibly talented. The best investment we made for our startup.",
+        "author": "Michael Chen",
+        "role": "Founder, Globex Inc"
+      },
+      {
+        "quote": "From concept to launch in just 3 weeks. The quality exceeded all our expectations.",
+        "author": "Emily Davis",
+        "role": "CTO, Initech"
+      }
+    ]
+  },
+  "careers": {
+    "title": "Join Our Team",
+    "subtitle": "We're always looking for talented people to join us",
+    "positions": [
+      {
+        "title": "Senior Frontend Developer",
+        "type": "Full-time",
+        "location": "Remote",
+        "description": "We're looking for an experienced React/Next.js developer to lead our frontend projects."
+      },
+      {
+        "title": "UI/UX Designer",
+        "type": "Full-time",
+        "location": "Istanbul, Turkey",
+        "description": "Join our design team and create beautiful interfaces for our clients' digital products."
+      },
+      {
+        "title": "DevOps Engineer",
+        "type": "Part-time",
+        "location": "Remote",
+        "description": "Help us build and maintain scalable cloud infrastructure for our hosting platform."
+      }
+    ],
+    "formTitle": "Apply Now",
+    "formSubtitle": "Send us your application and we'll get back to you within 48 hours"
+  },
+  "contact": {
+    "title": "Get in Touch",
+    "subtitle": "Ready to start your project? Let's talk.",
+    "phone": "+90 212 555 0100",
+    "email": "hello@techstart.com",
+    "address": "Levent Mah. Büyükdere Cad. No:123, Beşiktaş, Istanbul, Turkey",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3008.2!2d29.01!3d41.08!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDHCsDA0JzQ4LjAiTiAyOcKwMDAnMzYuMCJF!5e0!3m2!1sen!2str!4v1"
+  },
+  "footer": {
+    "copyright": "© 2026 TechStart. All rights reserved.",
+    "socialLinks": [
+      { "platform": "twitter", "url": "https://twitter.com" },
+      { "platform": "linkedin", "url": "https://linkedin.com" },
+      { "platform": "instagram", "url": "https://instagram.com" },
+      { "platform": "github", "url": "https://github.com" }
+    ],
+    "links": [
+      { "label": "Privacy Policy", "url": "/privacy" },
+      { "label": "KVKK", "url": "/kvkk" },
+      { "label": "Terms of Service", "url": "/terms" }
+    ]
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "sections": {
+    "hero": true,
+    "about": true,
+    "services": true,
+    "portfolio": true,
+    "careers": true,
+    "contact": true
+  },
+  "navbar": {
+    "logo": "Alex Mercer",
+    "links": [
+      { "label": "About", "href": "#about" },
+      { "label": "Skills", "href": "#services" },
+      { "label": "Work", "href": "#portfolio" },
+      { "label": "Careers", "href": "#careers" },
+      { "label": "Contact", "href": "#contact" }
+    ]
+  },
+  "hero": {
+    "greeting": "Hi, I'm",
+    "name": "Alex Mercer",
+    "title": "Product Designer",
+    "subtitle": "I design digital products that are simple, thoughtful, and built to last. Currently based in Berlin, available worldwide.",
+    "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&fit=crop",
+    "buttonText": "View My Work",
+    "buttonLink": "#portfolio",
+    "secondaryButtonText": "Get in Touch",
+    "secondaryButtonLink": "#contact",
+    "available": true
+  },
+  "about": {
+    "tagline": "About Me",
+    "title": "Designing with purpose since 2017",
+    "description": "I'm a product designer with 7+ years of experience crafting interfaces for startups and scale-ups. I believe great design is invisible — it just works.\n\nMy approach combines user research, clean aesthetics, and systems thinking. I've worked with teams at Spotify, Klarna, and several YC-backed startups.\n\nWhen I'm not designing, you'll find me photographing architecture, reading about typography, or brewing pour-over coffee.",
+    "imageUrl": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80",
+    "details": [
+      { "label": "Location", "value": "Berlin, Germany" },
+      { "label": "Experience", "value": "7+ Years" },
+      { "label": "Availability", "value": "Open to Projects" },
+      { "label": "Languages", "value": "EN, DE, TR" }
+    ]
+  },
+  "services": {
+    "tagline": "What I Do",
+    "title": "Skills & Expertise",
+    "items": [
+      { "title": "Product Design", "description": "End-to-end product design from research to high-fidelity prototypes", "icon": "layers" },
+      { "title": "UI Design", "description": "Pixel-perfect interfaces with consistent design systems", "icon": "grid" },
+      { "title": "UX Research", "description": "User interviews, usability testing, and data-driven decisions", "icon": "users" },
+      { "title": "Design Systems", "description": "Scalable component libraries and design tokens", "icon": "component" },
+      { "title": "Prototyping", "description": "Interactive prototypes in Figma and Framer", "icon": "play" },
+      { "title": "Frontend Dev", "description": "HTML, CSS, React — I can bring my designs to life", "icon": "code" }
+    ]
+  },
+  "portfolio": {
+    "tagline": "Selected Work",
+    "title": "Projects I've Worked On",
+    "projects": [
+      {
+        "title": "Klarna Checkout Redesign",
+        "description": "Reimagined the checkout flow for 150M+ users",
+        "category": "Product Design",
+        "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80",
+        "year": "2024"
+      },
+      {
+        "title": "NordHealth Dashboard",
+        "description": "Healthcare analytics platform for clinicians",
+        "category": "UI/UX Design",
+        "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80",
+        "year": "2024"
+      },
+      {
+        "title": "Beam Fintech App",
+        "description": "Mobile banking app for Gen Z users",
+        "category": "Mobile Design",
+        "imageUrl": "https://images.unsplash.com/photo-1563986768609-322da13575f2?w=600&q=80",
+        "year": "2023"
+      },
+      {
+        "title": "Atlas Travel Platform",
+        "description": "Booking experience for boutique hotels",
+        "category": "Web Design",
+        "imageUrl": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80",
+        "year": "2023"
+      },
+      {
+        "title": "Studio Brand Identity",
+        "description": "Visual identity for a Berlin design studio",
+        "category": "Branding",
+        "imageUrl": "https://images.unsplash.com/photo-1542744094-3a31f272c490?w=600&q=80",
+        "year": "2022"
+      },
+      {
+        "title": "Mono Design System",
+        "description": "Component library used by 40+ developers",
+        "category": "Design Systems",
+        "imageUrl": "https://images.unsplash.com/photo-1555421689-d68471e189f2?w=600&q=80",
+        "year": "2022"
+      }
+    ]
+  },
+  "careers": {
+    "tagline": "Work With Me",
+    "title": "Open Positions at My Studio",
+    "subtitle": "I occasionally hire collaborators for larger projects",
+    "positions": [
+      {
+        "title": "Junior UI Designer",
+        "type": "Contract",
+        "location": "Remote",
+        "description": "Help me deliver client projects. Strong Figma skills and an eye for detail required."
+      },
+      {
+        "title": "Freelance Developer",
+        "type": "Contract",
+        "location": "Remote",
+        "description": "React/Next.js developer to build out designed websites. Project-based work."
+      }
+    ],
+    "formTitle": "Apply",
+    "formSubtitle": "Drop your details and portfolio link below"
+  },
+  "contact": {
+    "tagline": "Say Hello",
+    "title": "Let's Work Together",
+    "subtitle": "Have a project in mind? I'd love to hear about it.",
+    "phone": "+49 30 555 0100",
+    "email": "hello@alexmercer.design",
+    "address": "Kreuzberg, Berlin, Germany",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2428.4!2d13.41!3d52.49!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sde!4v1"
+  },
+  "footer": {
+    "description": "Designing digital products with care.",
+    "copyright": "© 2026 Alex Mercer. All rights reserved.",
+    "socialLinks": [
+      { "platform": "twitter", "url": "https://twitter.com" },
+      { "platform": "linkedin", "url": "https://linkedin.com" },
+      { "platform": "github", "url": "https://github.com" },
+      { "platform": "instagram", "url": "https://instagram.com" }
+    ],
+    "links": [
+      { "label": "Privacy Policy", "url": "/privacy" },
+      { "label": "Impressum", "url": "/impressum" }
+    ]
+  }
+}

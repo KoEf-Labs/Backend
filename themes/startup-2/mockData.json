@@ -1,0 +1,201 @@
+{
+  "sections": {
+    "hero": true,
+    "about": true,
+    "services": true,
+    "references": true,
+    "careers": true,
+    "contact": true
+  },
+  "navbar": {
+    "logo": "NovaTech",
+    "links": [
+      { "label": "Home", "href": "#hero" },
+      { "label": "About", "href": "#about" },
+      { "label": "Services", "href": "#services" },
+      { "label": "Clients", "href": "#references" },
+      { "label": "Careers", "href": "#careers" },
+      { "label": "Contact", "href": "#contact" }
+    ]
+  },
+  "hero": {
+    "slides": [
+      {
+        "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1400&q=80",
+        "title": "Innovate. Build. Scale.",
+        "subtitle": "We craft digital products that transform businesses and delight users worldwide.",
+        "buttonText": "Start Your Project",
+        "buttonLink": "#contact"
+      },
+      {
+        "image": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1400&q=80",
+        "title": "Design That Speaks",
+        "subtitle": "Beautiful interfaces backed by solid engineering. Your vision, our execution.",
+        "buttonText": "View Our Work",
+        "buttonLink": "#references"
+      },
+      {
+        "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1400&q=80",
+        "title": "Join Our Growing Team",
+        "subtitle": "We're hiring talented people who want to make an impact. Remote-first culture.",
+        "buttonText": "See Open Roles",
+        "buttonLink": "#careers"
+      }
+    ]
+  },
+  "about": {
+    "tagline": "About NovaTech",
+    "title": "We Build Digital Experiences That Matter",
+    "description": "Founded in 2021, NovaTech is a product studio that partners with ambitious startups and forward-thinking enterprises. We combine strategy, design, and engineering to create software people love.\n\nOur team of 30+ specialists works across time zones, united by a shared obsession with quality and impact.",
+    "imageUrl": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",
+    "features": [
+      { "icon": "rocket", "title": "Fast Delivery", "description": "MVP in 4 weeks, production in 8" },
+      { "icon": "shield", "title": "Enterprise Security", "description": "SOC 2 compliant processes" },
+      { "icon": "globe", "title": "Global Team", "description": "30+ experts across 12 countries" }
+    ]
+  },
+  "services": {
+    "tagline": "What We Do",
+    "title": "Services Built for Growth",
+    "subtitle": "End-to-end digital solutions tailored to your business needs",
+    "items": [
+      {
+        "title": "Product Strategy",
+        "description": "We help you define your roadmap, validate ideas, and find product-market fit before writing a single line of code.",
+        "icon": "lightbulb",
+        "gradient": "from-violet-500 to-purple-600"
+      },
+      {
+        "title": "UI/UX Design",
+        "description": "Human-centered design that converts. We create interfaces that are intuitive, accessible, and memorable.",
+        "icon": "palette",
+        "gradient": "from-pink-500 to-rose-600"
+      },
+      {
+        "title": "Web Development",
+        "description": "Scalable web applications built with React, Next.js, and Node.js. Performance and SEO optimized.",
+        "icon": "code",
+        "gradient": "from-cyan-500 to-blue-600"
+      },
+      {
+        "title": "Mobile Apps",
+        "description": "Cross-platform mobile applications with Flutter and React Native. One codebase, every device.",
+        "icon": "mobile",
+        "gradient": "from-emerald-500 to-teal-600"
+      },
+      {
+        "title": "Cloud & DevOps",
+        "description": "AWS, GCP, and Azure infrastructure. CI/CD pipelines, monitoring, and auto-scaling from day one.",
+        "icon": "cloud",
+        "gradient": "from-amber-500 to-orange-600"
+      },
+      {
+        "title": "AI & Automation",
+        "description": "Integrate machine learning, chatbots, and workflow automation to 10x your team's productivity.",
+        "icon": "brain",
+        "gradient": "from-fuchsia-500 to-pink-600"
+      }
+    ]
+  },
+  "references": {
+    "tagline": "Trusted By",
+    "title": "Companies We've Worked With",
+    "subtitle": "From seed-stage startups to Fortune 500 enterprises",
+    "clients": [
+      { "name": "Stripe", "logo": "" },
+      { "name": "Vercel", "logo": "" },
+      { "name": "Linear", "logo": "" },
+      { "name": "Notion", "logo": "" },
+      { "name": "Figma", "logo": "" },
+      { "name": "Supabase", "logo": "" }
+    ],
+    "testimonials": [
+      {
+        "quote": "NovaTech didn't just build our product — they helped us rethink our entire approach. Revenue doubled in 6 months.",
+        "author": "Alex Rivera",
+        "role": "CEO, Launchpad.io",
+        "avatar": ""
+      },
+      {
+        "quote": "The quality of their design work is unreal. Every pixel is intentional. Our users literally applauded the redesign.",
+        "author": "Priya Sharma",
+        "role": "Head of Product, DataFlow",
+        "avatar": ""
+      },
+      {
+        "quote": "Working with NovaTech felt like having a CTO on demand. They made complex architecture decisions look easy.",
+        "author": "Marcus Jensen",
+        "role": "Founder, CloudSync",
+        "avatar": ""
+      }
+    ]
+  },
+  "careers": {
+    "tagline": "Join Us",
+    "title": "Build Your Career at NovaTech",
+    "subtitle": "Remote-first. Flexible hours. Meaningful work.",
+    "perks": [
+      "Fully remote team",
+      "Unlimited PTO",
+      "Learning budget",
+      "Latest hardware"
+    ],
+    "positions": [
+      {
+        "title": "Senior React Developer",
+        "type": "Full-time",
+        "location": "Remote",
+        "salary": "$120k - $160k",
+        "description": "Lead frontend architecture for our enterprise clients. 5+ years React experience required."
+      },
+      {
+        "title": "Product Designer",
+        "type": "Full-time",
+        "location": "Remote / Istanbul",
+        "salary": "$90k - $130k",
+        "description": "Own the design process end-to-end. Figma expert with strong systems thinking."
+      },
+      {
+        "title": "Backend Engineer (Node.js)",
+        "type": "Full-time",
+        "location": "Remote",
+        "salary": "$110k - $150k",
+        "description": "Build scalable APIs and microservices. Experience with PostgreSQL and Redis."
+      },
+      {
+        "title": "Marketing Intern",
+        "type": "Internship",
+        "location": "Istanbul, Turkey",
+        "salary": "Paid",
+        "description": "Help us grow our brand. Content creation, social media, and growth experiments."
+      }
+    ],
+    "formTitle": "Apply Now",
+    "formSubtitle": "Drop your details below and we'll reach out within 48 hours"
+  },
+  "contact": {
+    "tagline": "Contact",
+    "title": "Let's Build Something Great",
+    "subtitle": "Whether you have a project in mind or just want to chat, we'd love to hear from you.",
+    "phone": "+90 212 555 0200",
+    "email": "hello@novatech.dev",
+    "address": "Maslak Mah. Ahi Evran Cad. No:6, Sarıyer, Istanbul, Turkey",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3006.5!2d29.02!3d41.11!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDHCsDA2JzM2LjAiTiAyOcKwMDEnMTIuMCJF!5e0!3m2!1sen!2str!4v1"
+  },
+  "footer": {
+    "description": "We build digital products that transform businesses.",
+    "copyright": "© 2026 NovaTech. All rights reserved.",
+    "socialLinks": [
+      { "platform": "twitter", "url": "https://twitter.com" },
+      { "platform": "linkedin", "url": "https://linkedin.com" },
+      { "platform": "instagram", "url": "https://instagram.com" },
+      { "platform": "github", "url": "https://github.com" }
+    ],
+    "links": [
+      { "label": "Privacy Policy", "url": "/privacy" },
+      { "label": "KVKK", "url": "/kvkk" },
+      { "label": "Terms of Service", "url": "/terms" },
+      { "label": "Cookie Policy", "url": "/cookies" }
+    ]
+  }
+}
