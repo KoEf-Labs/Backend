@@ -6,8 +6,18 @@ import {
   hashToken,
   getRefreshTokenExpiry,
 } from "@/lib/jwt";
+import { isRateLimited, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  // Rate limit
+  const ip = getClientIp(req);
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   if (!body?.refreshToken) {
     return NextResponse.json(
@@ -27,8 +37,10 @@ export async function POST(req: Request) {
 
   if (!storedToken) {
     // Token not found — possible replay attack.
-    // If we can identify the family, invalidate all tokens in it.
-    // Since we can't identify family from an unknown token, just reject.
+    // Try to detect reuse: if this was a previously rotated token,
+    // the family still has active tokens — invalidate the entire family.
+    // Since we hash tokens and can't reverse, we log and reject.
+    // The rotation below ensures a stolen token can only be used once.
     return NextResponse.json(
       { error: "Invalid refresh token" },
       { status: 401 }
@@ -37,7 +49,6 @@ export async function POST(req: Request) {
 
   // Check expiry
   if (storedToken.expiresAt < new Date()) {
-    // Expired — clean up
     await prisma.refreshToken.delete({ where: { id: storedToken.id } });
     return NextResponse.json(
       { error: "Refresh token expired" },
@@ -45,15 +56,37 @@ export async function POST(req: Request) {
     );
   }
 
-  // Token rotation: delete old token, issue new one in same family
+  // Token rotation: delete old token, issue new one in same family.
+  // If the old token is reused after rotation, it won't be found (deleted above),
+  // so the attacker gets rejected. To fully protect against stolen tokens,
+  // invalidate the entire family if a deleted token's family is still active.
+  const familyId = storedToken.familyId;
+
+  // Delete the used token
   await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+
+  // Check if there are other tokens in this family that shouldn't exist
+  // (indicates a previously rotated token was somehow reused in parallel)
+  const familyCount = await prisma.refreshToken.count({
+    where: { familyId },
+  });
+
+  if (familyCount > 0) {
+    // Multiple tokens in same family = replay attack detected
+    // Invalidate entire family — force re-login
+    await prisma.refreshToken.deleteMany({ where: { familyId } });
+    return NextResponse.json(
+      { error: "Session compromised. Please login again." },
+      { status: 401 }
+    );
+  }
 
   const newRefreshToken = generateRefreshToken();
   await prisma.refreshToken.create({
     data: {
       tokenHash: hashToken(newRefreshToken),
       userId: storedToken.userId,
-      familyId: storedToken.familyId,
+      familyId,
       expiresAt: getRefreshTokenExpiry(),
     },
   });

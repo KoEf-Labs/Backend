@@ -35,16 +35,41 @@ export async function POST(req: Request) {
     );
   }
 
-  if (typeof email !== "string" || !email.includes("@")) {
+  // Email validation
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const MAX_EMAIL_LENGTH = 254;
+  if (
+    typeof email !== "string" ||
+    email.length > MAX_EMAIL_LENGTH ||
+    !EMAIL_REGEX.test(email)
+  ) {
     return NextResponse.json(
       { error: "Invalid email format" },
       { status: 400 }
     );
   }
 
-  if (typeof password !== "string" || password.length < 8) {
+  // Password validation: min 8 chars, must have uppercase + lowercase + number/symbol
+  if (typeof password !== "string" || password.length < 8 || password.length > 128) {
     return NextResponse.json(
-      { error: "Password must be at least 8 characters" },
+      { error: "Password must be 8-128 characters" },
+      { status: 400 }
+    );
+  }
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumberOrSymbol = /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  if (!hasUpper || !hasLower || !hasNumberOrSymbol) {
+    return NextResponse.json(
+      { error: "Password must include uppercase, lowercase, and a number or symbol" },
+      { status: 400 }
+    );
+  }
+
+  // Name length check
+  if (typeof name !== "string" || name.trim().length < 1 || name.length > 100) {
+    return NextResponse.json(
+      { error: "Name must be 1-100 characters" },
       { status: 400 }
     );
   }

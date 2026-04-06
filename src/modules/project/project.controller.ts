@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "./project.service";
-import fs from "fs";
-import path from "path";
+import { validateThemeName } from "@/src/shared/utils";
+import { getUserId as getAuthUserId } from "@/src/lib/auth";
 
 const service = new ProjectService();
-const THEMES_DIR = path.join(process.cwd(), "themes");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -19,7 +18,7 @@ function error(message: string, status: number) {
 }
 
 function getUserId(req: NextRequest): string | null {
-  return req.headers.get("x-user-id");
+  return getAuthUserId(req);
 }
 
 function sanitizeSubdomain(value: unknown): string | undefined {
@@ -42,23 +41,6 @@ function sanitizeDomain(value: unknown): string | undefined {
     return undefined;
   }
   return cleaned || undefined;
-}
-
-/**
- * Validate theme name format AND existence.
- * Returns clean theme name or null if invalid.
- */
-function validateThemeName(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== "string") return null;
-  const cleaned = value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 50);
-  if (!cleaned) return null;
-  // Check theme folder exists
-  const themeDir = path.join(THEMES_DIR, cleaned);
-  if (!fs.existsSync(themeDir) || !fs.statSync(themeDir).isDirectory()) {
-    return null;
-  }
-  return cleaned;
 }
 
 // ---------------------------------------------------------------------------

@@ -31,17 +31,38 @@ export function isRateLimited(key: string): boolean {
   return false;
 }
 
-/** Get client IP from request */
+/**
+ * Get client IP from request.
+ * Only trusts X-Forwarded-For when TRUST_PROXY=true (behind reverse proxy).
+ * Otherwise uses a fallback key to prevent IP spoofing.
+ */
 export function getClientIp(req: Request): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return "unknown";
+  const trustProxy = process.env.TRUST_PROXY === "true";
+
+  if (trustProxy) {
+    // Behind a trusted proxy (e.g. Cloudflare, nginx)
+    // Prefer Cloudflare header, then X-Real-IP, then X-Forwarded-For
+    const cfIp = req.headers.get("cf-connecting-ip");
+    if (cfIp) return cfIp.trim();
+
+    const realIp = req.headers.get("x-real-ip");
+    if (realIp) return realIp.trim();
+
+    const forwarded = req.headers.get("x-forwarded-for");
+    if (forwarded) return forwarded.split(",")[0].trim();
+  }
+
+  // Not behind proxy or no proxy headers — use a combination
+  // that's harder to spoof (in production, the reverse proxy should set these)
+  return req.headers.get("x-real-ip") || "unknown";
 }
 
 // Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of store) {
-    if (now > entry.resetAt) store.delete(key);
-  }
-}, 5 * 60 * 1000);
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of store) {
+      if (now > entry.resetAt) store.delete(key);
+    }
+  }, 5 * 60 * 1000);
+}

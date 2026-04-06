@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "@/src/modules/project/project.service";
 import { RenderService, RenderError } from "@/src/modules/render/render.service";
+import { getUserId } from "@/src/lib/auth";
 
 const projectService = new ProjectService();
 const renderService = new RenderService();
@@ -16,29 +17,21 @@ function error(message: string, status: number) {
 /**
  * GET /api/preview/:projectId
  *
- * Public endpoint — no auth required.
- * Fetches project from DB, renders theme with contentJson, returns HTML.
- *
- * Optional: pass x-user-id header to verify ownership.
- * Without it, renders any project (useful for browser preview & WebView).
+ * Requires authentication. Fetches project, verifies ownership,
+ * renders theme with contentJson, returns HTML.
  */
 export async function GET(req: NextRequest, { params }: Params) {
   const { projectId } = await params;
-  const userId = req.headers.get("x-user-id");
+  const userId = getUserId(req);
 
-  // 1. Fetch project
+  if (!userId) {
+    return error("Authentication required", 401);
+  }
+
+  // 1. Fetch project with ownership check
   let project;
   try {
-    if (userId) {
-      // If auth header provided, verify ownership
-      project = await projectService.getByIdForUser(projectId, userId);
-    } else {
-      // Public preview — fetch without ownership check
-      project = await projectService.getById(projectId);
-      if (!project) {
-        return error("Project not found", 404);
-      }
-    }
+    project = await projectService.getByIdForUser(projectId, userId);
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Failed to fetch project", 500);
