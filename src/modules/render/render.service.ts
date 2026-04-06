@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { isValidThemeName } from "@/src/shared/utils";
 
 const execFileAsync = promisify(execFile);
 
@@ -31,7 +32,6 @@ const WORKER_PATH = path.join(
   "src",
   "workers",
   "render-worker.tsx"
-);
 );
 
 // ---------------------------------------------------------------------------
@@ -145,6 +145,9 @@ export class RenderService {
   }
 
   private assertThemeExists(theme: string): void {
+    if (!isValidThemeName(theme)) {
+      throw new RenderError(`Invalid theme name`, 400);
+    }
     const dir = path.join(THEMES_DIR, theme);
     if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
       throw new RenderError(`Theme "${theme}" not found`, 404);

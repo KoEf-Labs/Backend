@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { MemoryCache } from "@/src/lib/cache";
+import { isValidThemeName } from "@/src/shared/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,6 +81,10 @@ export class SchemaService {
    * Cached for 5 minutes.
    */
   getSchema(themeName: string): ParsedSchema {
+    if (!isValidThemeName(themeName)) {
+      throw new SchemaError(`Invalid theme name`, 400);
+    }
+
     // Check cache first
     const cached = schemaCache.get(themeName);
     if (cached) return cached;
