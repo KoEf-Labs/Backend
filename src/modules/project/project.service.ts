@@ -1,6 +1,7 @@
 import { prisma } from "@/src/lib/db";
 import { Prisma, ProjectStatus } from "@prisma/client";
 import { ContentValidator } from "../theme/content-validator";
+import { RenderService } from "../render/render.service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +27,7 @@ export interface UpdateProjectInput {
 // ---------------------------------------------------------------------------
 
 const validator = new ContentValidator();
+const renderService = new RenderService();
 
 export class ProjectService {
   async getById(id: string) {
@@ -165,6 +167,14 @@ export class ProjectService {
 
     if (project.status !== ProjectStatus.PENDING) {
       throw new ServiceError("Only pending projects can be approved", 400);
+    }
+
+    // Invalidate old published content cache
+    if (project.publishedContent) {
+      renderService.invalidateCache(
+        project.theme,
+        project.publishedContent as Record<string, unknown>
+      );
     }
 
     return prisma.project.update({

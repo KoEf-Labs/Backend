@@ -1,10 +1,16 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { isValidThemeName } from "@/src/shared/utils";
+import { MemoryCache } from "@/src/lib/cache";
 
 const execFileAsync = promisify(execFile);
+
+// HTML render cache — key: hash(theme + content), value: rendered HTML
+// 10 minute TTL for published content
+const renderCache = new MemoryCache<RenderOutput>(600);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,13 +46,29 @@ const WORKER_PATH = path.join(
 
 export class RenderService {
   /**
+   * Build a cache key from theme + content hash.
+   */
+  private cacheKey(theme: string, content: Record<string, unknown>): string {
+    const hash = crypto
+      .createHash("md5")
+      .update(JSON.stringify(content))
+      .digest("hex");
+    return `${theme}:${hash}`;
+  }
+
+  /**
    * Render a theme with content JSON → full HTML.
-   * Spawns tsx to run the render worker outside Next.js.
+   * Uses in-memory cache to avoid re-rendering identical content.
    */
   async renderTheme(input: RenderInput): Promise<RenderOutput> {
     const { theme, content } = input;
 
     this.assertThemeExists(theme);
+
+    // Check cache
+    const key = this.cacheKey(theme, content);
+    const cached = renderCache.get(key);
+    if (cached) return cached;
 
     try {
       const child = execFileAsync(
@@ -77,7 +99,7 @@ export class RenderService {
       const heroData = content.hero as Record<string, unknown> | undefined;
       const navData = content.navbar as Record<string, unknown> | undefined;
 
-      return {
+      const result: RenderOutput = {
         html: stdout,
         theme,
         title:
@@ -86,10 +108,26 @@ export class RenderService {
           "Website",
         renderedAt: new Date().toISOString(),
       };
+
+      // Cache the result
+      renderCache.set(key, result);
+      return result;
     } catch (e: unknown) {
       if (e instanceof RenderError) throw e;
       const message = e instanceof Error ? e.message : String(e);
       throw new RenderError(`Render failed for "${theme}": ${message}`, 500);
+    }
+  }
+
+  /**
+   * Invalidate render cache for a specific project's content.
+   * Called after publish/approve to force re-render.
+   */
+  invalidateCache(theme?: string, content?: Record<string, unknown>): void {
+    if (theme && content) {
+      renderCache.invalidate(this.cacheKey(theme, content));
+    } else {
+      renderCache.clear();
     }
   }
 
