@@ -22,6 +22,7 @@ const PUBLIC_ROUTES = [
   "/api/site/validate",
   "/api/site/live",
   "/api/domain/check",
+  "/api/uploads",
 ];
 
 // Trusted proxy header — only trust X-Forwarded-For behind a reverse proxy
