@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { SchemaService, SchemaError } from "./schema.service";
+import { isValidThemeName } from "@/src/shared/utils";
 
 const service = new SchemaService();
 
@@ -36,8 +39,16 @@ export async function handleGetEditableFields(name: string) {
 // GET /api/themes/:name/validate → validate schema
 export async function handleValidateSchema(name: string) {
   try {
+    if (!isValidThemeName(name)) {
+      return error("Invalid theme name", 400);
+    }
+
     const schema = service.getSchema(name);
-    const raw = require(`../../../../themes/${name}/schema.json`);
+    const schemaPath = path.join(process.cwd(), "themes", name, "schema.json");
+    if (!fs.existsSync(schemaPath)) {
+      return error("Schema file not found", 404);
+    }
+    const raw = JSON.parse(fs.readFileSync(schemaPath, "utf-8"));
     const result = service.validate(raw, name);
     return json({ theme: name, ...result });
   } catch (e) {

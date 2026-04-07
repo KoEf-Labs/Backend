@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "@/src/modules/project/project.service";
 import { RenderService, RenderError } from "@/src/modules/render/render.service";
+import { getUserId } from "@/src/lib/auth";
 
 const projectService = new ProjectService();
 const renderService = new RenderService();
@@ -17,12 +18,13 @@ function error(message: string, status: number) {
  * GET /api/site/preview/:projectId
  *
  * Two modes:
- * - With x-user-id header → owner preview, renders draftContent (for editor preview)
- * - Without x-user-id header → public view, renders publishedContent only
+ * - Authenticated (JWT) or ?draft=true → owner preview, renders draftContent
+ * - Public (no auth) → renders publishedContent only
  */
 export async function GET(req: NextRequest, { params }: Params) {
   const { projectId } = await params;
-  const userId = req.headers.get("x-user-id");
+  const userId = getUserId(req);
+  const isDraftPreview = req.nextUrl.searchParams.get("draft") === "true";
 
   // 1. Fetch project
   let project;
@@ -41,9 +43,6 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 
   // 2. Determine which content to render
-  //    ?draft=true → owner draft preview (WebView can't send headers)
-  //    Otherwise without auth → public published view
-  const isDraftPreview = req.nextUrl.searchParams.get("draft") === "true";
   let content: Record<string, unknown>;
 
   if (userId || isDraftPreview) {

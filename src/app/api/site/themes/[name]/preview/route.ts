@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { isValidThemeName } from "@/src/shared/utils";
 
 interface Params { params: Promise<{ name: string }> }
 
@@ -11,6 +12,11 @@ interface Params { params: Promise<{ name: string }> }
  */
 export async function GET(_req: Request, { params }: Params) {
   const { name } = await params;
+
+  if (!isValidThemeName(name)) {
+    return NextResponse.json({ error: "Invalid theme name" }, { status: 400 });
+  }
+
   const themesDir = path.join(process.cwd(), "themes");
   const mockPath = path.join(themesDir, name, "mockData.json");
 

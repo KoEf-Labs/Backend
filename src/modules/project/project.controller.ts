@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "./project.service";
-import fs from "fs";
-import path from "path";
+import { validateThemeName } from "@/src/shared/utils";
+import { getUserId as getAuthUserId, requireAdmin } from "@/src/lib/auth";
 
 const service = new ProjectService();
-const THEMES_DIR = path.join(process.cwd(), "themes");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -19,7 +18,7 @@ function error(message: string, status: number) {
 }
 
 function getUserId(req: NextRequest): string | null {
-  return req.headers.get("x-user-id");
+  return getAuthUserId(req);
 }
 
 function sanitizeSubdomain(value: unknown): string | undefined {
@@ -45,21 +44,6 @@ function sanitizeDomain(value: unknown): string | undefined {
 }
 
 /**
- * Validate theme name format AND existence.
- */
-function validateThemeName(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== "string") return null;
-  const cleaned = value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 50);
-  if (!cleaned) return null;
-  const themeDir = path.join(THEMES_DIR, cleaned);
-  if (!fs.existsSync(themeDir) || !fs.statSync(themeDir).isDirectory()) {
-    return null;
-  }
-  return cleaned;
-}
-
-/**
  * Map project DB record to API response.
  * Mobil taraf "contentJson" bekliyor → draftContent'i contentJson olarak döndür.
  */
@@ -78,7 +62,7 @@ function toApiResponse(project: any) {
 
 export async function handleGet(req: NextRequest, id?: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     if (id) {
@@ -95,7 +79,7 @@ export async function handleGet(req: NextRequest, id?: string) {
 
 export async function handlePost(req: NextRequest) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     const body = await req.json();
@@ -120,7 +104,7 @@ export async function handlePost(req: NextRequest) {
 
 export async function handlePatch(req: NextRequest, id: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     const body = await req.json();
@@ -148,7 +132,7 @@ export async function handlePatch(req: NextRequest, id: string) {
 
 export async function handleDelete(req: NextRequest, id: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     await service.delete(id, userId);
@@ -165,7 +149,7 @@ export async function handleDelete(req: NextRequest, id: string) {
 
 export async function handlePublish(req: NextRequest, id: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     const project = await service.submitForReview(id, userId);
@@ -180,7 +164,13 @@ export async function handlePublish(req: NextRequest, id: string) {
 // Admin — approve / reject / list pending
 // ---------------------------------------------------------------------------
 
-export async function handleAdminList() {
+export async function handleAdminList(req: NextRequest) {
+  try {
+    requireAdmin(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
   try {
     const projects = await service.listPending();
     return json(projects.map(toApiResponse));
@@ -190,7 +180,13 @@ export async function handleAdminList() {
   }
 }
 
-export async function handleAdminApprove(id: string) {
+export async function handleAdminApprove(req: NextRequest, id: string) {
+  try {
+    requireAdmin(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
   try {
     const project = await service.approve(id);
     return json(toApiResponse(project));
@@ -201,6 +197,12 @@ export async function handleAdminApprove(id: string) {
 }
 
 export async function handleAdminReject(req: NextRequest, id: string) {
+  try {
+    requireAdmin(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const project = await service.reject(id, body.reason);

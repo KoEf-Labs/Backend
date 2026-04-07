@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 enum ProjectStatus {
   DRAFT
   PENDING
@@ -14,9 +19,36 @@ enum ProjectStatus {
   REJECTED
 }
 
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  projects      Project[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
+
 model Project {
   id               String        @id @default(uuid())
   userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   theme            String
   draftContent     Json
   publishedContent Json?

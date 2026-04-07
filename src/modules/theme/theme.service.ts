@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { MemoryCache } from "@/src/lib/cache";
+import { isValidThemeName } from "@/src/shared/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +38,9 @@ function themePath(themeName: string): string {
 }
 
 function assertThemeExists(themeName: string): void {
+  if (!isValidThemeName(themeName)) {
+    throw new ThemeError(`Invalid theme name`, 400);
+  }
   const dir = themePath(themeName);
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
     throw new ThemeError(`Theme "${themeName}" not found`, 404);
