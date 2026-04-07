@@ -1,4 +1,5 @@
 import React from "react";
+import { safeUrl, safeEmbedUrl } from "../shared/safe-url";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -197,7 +198,7 @@ export default function Startup1Theme({ data }: { data: ThemeData }) {
                 .map((link, i) => (
                   <a
                     key={i}
-                    href={link.href}
+                    href={safeUrl(link.href)}
                     className="text-sm text-gray-600 hover:text-gray-900 transition"
                   >
                     {link.label}
@@ -232,7 +233,7 @@ export default function Startup1Theme({ data }: { data: ThemeData }) {
                 </p>
                 {data.hero.buttonText && (
                   <a
-                    href={data.hero.buttonLink || "#contact"}
+                    href={safeUrl(data.hero.buttonLink) || "#contact"}
                     className="inline-flex items-center gap-2 bg-white text-indigo-700 font-semibold px-8 py-3.5 rounded-full hover:bg-gray-100 transition shadow-lg shadow-indigo-900/20"
                   >
                     {data.hero.buttonText}
@@ -554,7 +555,7 @@ export default function Startup1Theme({ data }: { data: ThemeData }) {
               <div className="rounded-2xl overflow-hidden shadow-lg h-[400px]">
                 {data.contact.mapEmbedUrl ? (
                   <iframe
-                    src={data.contact.mapEmbedUrl}
+                    src={safeEmbedUrl(data.contact.mapEmbedUrl)}
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
@@ -632,7 +633,7 @@ export default function Startup1Theme({ data }: { data: ThemeData }) {
                   })
                   .map((link, i) => (
                     <li key={i}>
-                      <a href={link.href} className="text-gray-400 hover:text-white text-sm transition">
+                      <a href={safeUrl(link.href)} className="text-gray-400 hover:text-white text-sm transition">
                         {link.label}
                       </a>
                     </li>
@@ -646,7 +647,7 @@ export default function Startup1Theme({ data }: { data: ThemeData }) {
               <ul className="space-y-2">
                 {data.footer.links.map((link, i) => (
                   <li key={i}>
-                    <a href={link.url} className="text-gray-400 hover:text-white text-sm transition">
+                    <a href={safeUrl(link.url)} className="text-gray-400 hover:text-white text-sm transition">
                       {link.label}
                     </a>
                   </li>
@@ -660,7 +661,7 @@ export default function Startup1Theme({ data }: { data: ThemeData }) {
               {data.footer.socialLinks.map((social, i) => (
                 <a
                   key={i}
-                  href={social.url}
+                  href={safeUrl(social.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-500 hover:text-white transition"

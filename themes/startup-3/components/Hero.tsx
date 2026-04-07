@@ -1,4 +1,5 @@
 import React from "react";
+import { safeUrl } from "../../shared/safe-url";
 
 interface Props {
   badge?: string;
@@ -41,12 +42,12 @@ export default function Hero(props: Props) {
           {props.subtitle}
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20 animate-fade-up anim-delay-400">
-          <a href={props.buttonLink || "#contact"} className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] transition duration-300">
+          <a href={safeUrl(props.buttonLink) || "#contact"} className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] transition duration-300">
             {props.buttonText}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
           </a>
           {props.secondaryButtonText && (
-            <a href={props.secondaryButtonLink || "#"} className="inline-flex items-center gap-2 border border-gray-700 text-gray-300 font-medium px-8 py-4 rounded-xl hover:border-gray-500 hover:text-white transition duration-300">
+            <a href={safeUrl(props.secondaryButtonLink) || "#"} className="inline-flex items-center gap-2 border border-gray-700 text-gray-300 font-medium px-8 py-4 rounded-xl hover:border-gray-500 hover:text-white transition duration-300">
               {props.secondaryButtonText}
             </a>
           )}

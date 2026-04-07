@@ -1,4 +1,5 @@
 import React from "react";
+import { safeUrl } from "../../shared/safe-url";
 
 interface Props { greeting?: string; name: string; title: string; subtitle: string; avatarUrl?: string; buttonText: string; buttonLink: string; secondaryButtonText?: string; secondaryButtonLink?: string; available?: boolean; }
 
@@ -27,11 +28,11 @@ export default function Hero(props: Props) {
             </h1>
             <p className="text-gray-400 text-lg max-w-xl leading-relaxed mb-8">{props.subtitle}</p>
             <div className="flex items-center gap-3">
-              <a href={props.buttonLink || "#portfolio"} className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-gray-800 transition">
+              <a href={safeUrl(props.buttonLink) || "#portfolio"} className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-gray-800 transition">
                 {props.buttonText}
               </a>
               {props.secondaryButtonText && (
-                <a href={props.secondaryButtonLink || "#"} className="inline-flex items-center gap-2 text-gray-500 text-sm font-medium px-5 py-2.5 rounded-lg border border-gray-200 hover:border-gray-300 hover:text-gray-900 transition">
+                <a href={safeUrl(props.secondaryButtonLink) || "#"} className="inline-flex items-center gap-2 text-gray-500 text-sm font-medium px-5 py-2.5 rounded-lg border border-gray-200 hover:border-gray-300 hover:text-gray-900 transition">
                   {props.secondaryButtonText}
                 </a>
               )}

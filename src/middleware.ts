@@ -47,11 +47,30 @@ function getAllowedOrigin(request: NextRequest): string | null {
   return ALLOWED_ORIGINS.has(origin) ? origin : null;
 }
 
-function addSecurityHeaders(response: NextResponse): void {
+function addSecurityHeaders(response: NextResponse, pathname: string): void {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // CSP for rendered site pages (preview, live)
+  if (pathname.startsWith("/api/site/preview") || pathname.startsWith("/api/site/live")) {
+    response.headers.set(
+      "Content-Security-Policy",
+      [
+        "default-src 'self'",
+        "script-src 'self' https://cdn.tailwindcss.com",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' https: data:",
+        "font-src 'self' https:",
+        "frame-src https://www.google.com https://maps.google.com",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+      ].join("; ")
+    );
+  }
+
   if (process.env.NODE_ENV === "production") {
     response.headers.set(
       "Strict-Transport-Security",
@@ -87,7 +106,7 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
   addCorsHeaders(response, origin);
-  addSecurityHeaders(response);
+  addSecurityHeaders(response, pathname);
 
   // Skip auth check for public routes
   if (isPublicRoute(pathname)) {

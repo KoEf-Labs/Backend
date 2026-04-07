@@ -1,3 +1,4 @@
+import sanitizeHtml from "sanitize-html";
 import { SchemaService, SchemaField, SchemaGroup } from "./schema.service";
 
 // ---------------------------------------------------------------------------
@@ -12,7 +13,7 @@ export interface ContentValidationResult {
 export interface ContentValidationError {
   path: string;
   message: string;
-  type: "missing" | "wrong_type" | "too_long" | "invalid_option" | "max_items" | "xss";
+  type: "missing" | "wrong_type" | "too_long" | "invalid_option" | "max_items" | "xss" | "invalid_url";
 }
 
 // ---------------------------------------------------------------------------
@@ -23,18 +24,75 @@ const MAX_TEXT_LENGTH = 500;
 const MAX_TEXTAREA_LENGTH = 5000;
 const MAX_URL_LENGTH = 2000;
 
-// Patterns that indicate XSS attempts
+// sanitize-html config — strip ALL HTML tags, no exceptions
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [],
+  allowedAttributes: {},
+  disallowedTagsMode: "discard",
+};
+
+// Dangerous URL protocols — anything not in this list is blocked
+const SAFE_URL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+
+// Additional XSS patterns that encoding tricks might bypass
 const XSS_PATTERNS = [
   /<script/i,
-  /javascript:/i,
-  /on\w+\s*=/i,       // onclick=, onerror=, etc.
+  /javascript\s*:/i,
+  /on\w+\s*=/i,
   /<iframe/i,
   /<object/i,
   /<embed/i,
   /<form/i,
   /eval\s*\(/i,
   /expression\s*\(/i,
+  /vbscript\s*:/i,
+  /data\s*:\s*text\/html/i,
 ];
+
+// ---------------------------------------------------------------------------
+// URL Sanitization (used by themes via import)
+// ---------------------------------------------------------------------------
+
+/**
+ * Sanitize a URL — block dangerous protocols.
+ * Returns "#" if URL is unsafe.
+ */
+export function safeUrl(url: unknown): string {
+  if (typeof url !== "string" || !url.trim()) return "#";
+
+  const trimmed = url.trim();
+
+  // Allow relative URLs (start with / or #)
+  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
+
+  // Parse and check protocol
+  try {
+    const parsed = new URL(trimmed);
+    if (!SAFE_URL_PROTOCOLS.has(parsed.protocol)) return "#";
+    return trimmed;
+  } catch {
+    // Not a valid absolute URL — could be a relative path or anchor
+    // Block anything that looks like a protocol
+    if (/^[a-z]+:/i.test(trimmed)) return "#";
+    return trimmed;
+  }
+}
+
+/**
+ * Sanitize a URL specifically for iframe src — only allow https.
+ */
+export function safeEmbedUrl(url: unknown): string {
+  if (typeof url !== "string" || !url.trim()) return "";
+
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:") return "";
+    return trimmed;
+  } catch {
+    return "";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Service
@@ -58,9 +116,7 @@ export class ContentValidator {
     const schema = this.schemaService.getSchema(themeName);
     const errors: ContentValidationError[] = [];
 
-    // Validate each schema group against content
     for (const [groupKey, group] of Object.entries(schema.groups)) {
-      // Skip the sections toggle group — it's just booleans
       if (groupKey === "sections") {
         this.validateSections(content["sections"], schema.sections, errors);
         continue;
@@ -90,7 +146,7 @@ export class ContentValidator {
   }
 
   /**
-   * Sanitize content — strip dangerous HTML from all text fields.
+   * Sanitize content — strip ALL HTML tags, block dangerous URLs.
    * Returns a cleaned copy.
    */
   sanitizeContent(
@@ -158,7 +214,6 @@ export class ContentValidator {
     value: unknown,
     errors: ContentValidationError[]
   ): void {
-    // Skip undefined/null — fields are optional
     if (value === undefined || value === null) return;
 
     switch (field.type) {
@@ -171,6 +226,7 @@ export class ContentValidator {
           errors.push({ path, message: `Text too long (${value.length}/${MAX_TEXT_LENGTH})`, type: "too_long" });
         }
         this.checkXSS(path, value, errors);
+        this.checkUrl(path, value, errors);
         break;
 
       case "textarea":
@@ -192,8 +248,8 @@ export class ContentValidator {
         if (value.length > MAX_URL_LENGTH) {
           errors.push({ path, message: `URL too long (${value.length}/${MAX_URL_LENGTH})`, type: "too_long" });
         }
-        if (value && !value.startsWith("http://") && !value.startsWith("https://") && !value.startsWith("/")) {
-          errors.push({ path, message: `Invalid image URL`, type: "wrong_type" });
+        if (value && safeUrl(value) === "#") {
+          errors.push({ path, message: `Invalid or unsafe URL`, type: "invalid_url" });
         }
         break;
 
@@ -221,7 +277,6 @@ export class ContentValidator {
         if (field.maxItems && value.length > field.maxItems) {
           errors.push({ path, message: `Too many items (${value.length}/${field.maxItems})`, type: "max_items" });
         }
-        // Validate each item against the array's inner schema
         if (field.schema) {
           for (let i = 0; i < value.length; i++) {
             const item = value[i];
@@ -241,15 +296,30 @@ export class ContentValidator {
   }
 
   private checkXSS(path: string, value: string, errors: ContentValidationError[]): void {
+    // Decode HTML entities before checking (prevent encoding bypass)
+    const decoded = value
+      .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/&#(\d+);?/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+      .replace(/&(lt|gt|amp|quot|apos);/gi, (m) => {
+        const map: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&apos;": "'" };
+        return map[m.toLowerCase()] || m;
+      });
+
     for (const pattern of XSS_PATTERNS) {
-      if (pattern.test(value)) {
-        errors.push({
-          path,
-          message: `Potentially dangerous content detected`,
-          type: "xss",
-        });
+      if (pattern.test(value) || pattern.test(decoded)) {
+        errors.push({ path, message: "Potentially dangerous content detected", type: "xss" });
         return;
       }
+    }
+  }
+
+  /**
+   * Check if a text field contains a URL with a dangerous protocol.
+   * This catches buttonLink, href fields stored as "text" type.
+   */
+  private checkUrl(path: string, value: string, errors: ContentValidationError[]): void {
+    if (/^[a-z]+:/i.test(value) && safeUrl(value) === "#") {
+      errors.push({ path, message: "Unsafe URL protocol", type: "invalid_url" });
     }
   }
 
@@ -264,12 +334,23 @@ export class ContentValidator {
         }
       }
 
+      if (fieldDef.type === "image") {
+        if (typeof value === "string") {
+          content[fieldKey] = safeUrl(value) === "#" ? "" : value;
+        }
+      }
+
       if (fieldDef.type === "array" && Array.isArray(value) && fieldDef.schema) {
         for (const item of value) {
           if (typeof item !== "object" || item === null) continue;
           for (const [subKey, subField] of Object.entries(fieldDef.schema)) {
-            if ((subField.type === "text" || subField.type === "textarea") && typeof (item as any)[subKey] === "string") {
-              (item as any)[subKey] = this.sanitizeString((item as any)[subKey]);
+            const subVal = (item as any)[subKey];
+            if (subVal === undefined || subVal === null) continue;
+            if ((subField.type === "text" || subField.type === "textarea") && typeof subVal === "string") {
+              (item as any)[subKey] = this.sanitizeString(subVal);
+            }
+            if (subField.type === "image" && typeof subVal === "string") {
+              (item as any)[subKey] = safeUrl(subVal) === "#" ? "" : subVal;
             }
           }
         }
@@ -277,13 +358,14 @@ export class ContentValidator {
     }
   }
 
+  /**
+   * Strip ALL HTML using sanitize-html library (battle-tested).
+   * Also handles encoded XSS payloads.
+   */
   private sanitizeString(value: string): string {
-    return value
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, "")
-      .replace(/<object[^>]*>[\s\S]*?<\/object>/gi, "")
-      .replace(/<embed[^>]*>/gi, "")
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "")
-      .replace(/javascript\s*:/gi, "");
+    // sanitize-html strips all tags (allowedTags: [])
+    const cleaned = sanitizeHtml(value, SANITIZE_OPTIONS);
+    // Also neutralize javascript: protocol (even encoded)
+    return cleaned.replace(/javascript\s*:/gi, "").replace(/vbscript\s*:/gi, "");
   }
 }

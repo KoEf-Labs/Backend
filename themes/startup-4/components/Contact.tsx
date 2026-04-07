@@ -1,4 +1,5 @@
 import React from "react";
+import { safeEmbedUrl } from "../../shared/safe-url";
 
 interface Props { tagline: string; title: string; subtitle?: string; phone: string; email: string; address: string; mapEmbedUrl?: string; }
 
@@ -14,7 +15,7 @@ export default function Contact(props: Props) {
         <div className="grid lg:grid-cols-2 gap-10">
           <div className="rounded-3xl overflow-hidden h-[400px] shadow-lg animate-fade-up">
             {props.mapEmbedUrl ? (
-              <iframe src={props.mapEmbedUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+              <iframe src={safeEmbedUrl(props.mapEmbedUrl)} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
             ) : (
               <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">Google Maps</div>
             )}

@@ -1,5 +1,6 @@
 import React from "react";
 import { SocialIcon } from "./Icons";
+import { safeUrl } from "../../shared/safe-url";
 
 interface Props { logo: string; description: string; copyright: string; socialLinks: { platform: string; url: string }[]; links: { label: string; url: string }[]; }
 
@@ -14,7 +15,7 @@ export default function Footer(props: Props) {
           </div>
           <div className="flex items-center gap-3">
             {props.socialLinks.map((s, i) => (
-              <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+              <a key={i} href={safeUrl(s.url)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
                 <SocialIcon platform={s.platform} />
               </a>
             ))}
@@ -24,7 +25,7 @@ export default function Footer(props: Props) {
           <p className="text-[12px] text-gray-300">{props.copyright}</p>
           <div className="flex items-center gap-4">
             {props.links.map((l, i) => (
-              <a key={i} href={l.url} className="text-[12px] text-gray-300 hover:text-gray-500 transition">{l.label}</a>
+              <a key={i} href={safeUrl(l.url)} className="text-[12px] text-gray-300 hover:text-gray-500 transition">{l.label}</a>
             ))}
           </div>
         </div>
