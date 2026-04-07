@@ -17,6 +17,9 @@ const PUBLIC_ROUTES = [
   "/api/auth/refresh",
   "/api/auth/logout",
   "/api/site/render",
+  "/api/site/themes",
+  "/api/site/preview",
+  "/api/site/validate",
 ];
 
 // Trusted proxy header — only trust X-Forwarded-For behind a reverse proxy

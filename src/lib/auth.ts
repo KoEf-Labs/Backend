@@ -2,19 +2,32 @@ import { NextRequest } from "next/server";
 import { verifyAccessToken, AccessTokenPayload } from "./jwt";
 
 /**
- * Extract and verify JWT from Authorization header.
- * Returns the decoded payload or null.
+ * Extract and verify JWT from:
+ * 1. Authorization: Bearer <token> header
+ * 2. ?token=<token> query parameter (for WebView which can't send headers)
  */
 export function getAuthPayload(req: NextRequest): AccessTokenPayload | null {
+  // Try header first
   const header = req.headers.get("authorization");
-  if (!header?.startsWith("Bearer ")) return null;
-
-  const token = header.slice(7);
-  try {
-    return verifyAccessToken(token);
-  } catch {
-    return null;
+  if (header?.startsWith("Bearer ")) {
+    try {
+      return verifyAccessToken(header.slice(7));
+    } catch {
+      return null;
+    }
   }
+
+  // Fallback: query parameter (for WebView preview)
+  const queryToken = req.nextUrl.searchParams.get("token");
+  if (queryToken && queryToken !== "null") {
+    try {
+      return verifyAccessToken(queryToken);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 /** Get userId from JWT */
