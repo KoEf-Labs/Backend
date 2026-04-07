@@ -1,4 +1,5 @@
 import React from "react";
+import { safeUrl, safeEmbedUrl } from "../shared/safe-url";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -113,7 +114,7 @@ export default function Startup2Theme({ data }: { data: ThemeData }) {
               {data.navbar.links
                 .filter(l => { const id = l.href.replace("#",""); return !(id in sec) || sec[id]; })
                 .map((link, i) => (
-                  <a key={i} href={link.href} className="text-sm text-gray-400 hover:text-white transition">{link.label}</a>
+                  <a key={i} href={safeUrl(link.href)} className="text-sm text-gray-400 hover:text-white transition">{link.label}</a>
                 ))}
             </div>
             <a href="#contact" className="hidden sm:inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full hover:shadow-lg hover:shadow-violet-500/25 transition">
@@ -147,7 +148,7 @@ export default function Startup2Theme({ data }: { data: ThemeData }) {
                     </p>
                     {slide.buttonText && (
                       <a
-                        href={slide.buttonLink || "#contact"}
+                        href={safeUrl(slide.buttonLink) || "#contact"}
                         className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold px-8 py-4 rounded-full hover:shadow-xl hover:shadow-violet-500/30 transition animate-fade-up delay-300"
                       >
                         {slide.buttonText}
@@ -361,7 +362,7 @@ export default function Startup2Theme({ data }: { data: ThemeData }) {
             <div className="grid lg:grid-cols-2 gap-12">
               <div className="rounded-2xl overflow-hidden shadow-xl h-[420px] animate-fade-up">
                 {data.contact.mapEmbedUrl ? (
-                  <iframe src={data.contact.mapEmbedUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                  <iframe src={safeEmbedUrl(data.contact.mapEmbedUrl)} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
                 ) : (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">Google Maps</div>
                 )}
@@ -399,7 +400,7 @@ export default function Startup2Theme({ data }: { data: ThemeData }) {
               <p className="text-gray-400 text-sm max-w-sm leading-relaxed mb-6">{data.footer.description}</p>
               <div className="flex items-center gap-3">
                 {data.footer.socialLinks.map((s, i) => (
-                  <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition">
+                  <a key={i} href={safeUrl(s.url)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition">
                     <SocialIcon platform={s.platform} />
                   </a>
                 ))}
@@ -411,7 +412,7 @@ export default function Startup2Theme({ data }: { data: ThemeData }) {
                 {data.navbar.links
                   .filter(l => { const id = l.href.replace("#",""); return !(id in sec) || sec[id]; })
                   .map((l, i) => (
-                    <li key={i}><a href={l.href} className="text-gray-400 hover:text-white text-sm transition">{l.label}</a></li>
+                    <li key={i}><a href={safeUrl(l.href)} className="text-gray-400 hover:text-white text-sm transition">{l.label}</a></li>
                   ))}
               </ul>
             </div>
@@ -419,7 +420,7 @@ export default function Startup2Theme({ data }: { data: ThemeData }) {
               <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-gray-500">Legal</h4>
               <ul className="space-y-3">
                 {data.footer.links.map((l, i) => (
-                  <li key={i}><a href={l.url} className="text-gray-400 hover:text-white text-sm transition">{l.label}</a></li>
+                  <li key={i}><a href={safeUrl(l.url)} className="text-gray-400 hover:text-white text-sm transition">{l.label}</a></li>
                 ))}
               </ul>
             </div>

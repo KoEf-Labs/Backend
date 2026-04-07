@@ -1,4 +1,5 @@
 import React from "react";
+import { safeUrl } from "../../shared/safe-url";
 
 interface Props { logo: string; links: { label: string; href: string }[]; sections: Record<string, boolean>; }
 
@@ -10,7 +11,7 @@ export default function Navbar({ logo, links, sections }: Props) {
           <a href="#" className="text-sm font-medium text-gray-900 tracking-tight">{logo}</a>
           <div className="hidden md:flex items-center gap-6">
             {links.filter(l => { const id = l.href.replace("#",""); return !(id in sections) || sections[id]; }).map((l, i) => (
-              <a key={i} href={l.href} className="text-[13px] text-gray-400 hover:text-gray-900 transition">{l.label}</a>
+              <a key={i} href={safeUrl(l.href)} className="text-[13px] text-gray-400 hover:text-gray-900 transition">{l.label}</a>
             ))}
           </div>
           <a href="#contact" className="text-[13px] font-medium text-gray-900 hover:text-gray-600 transition">Contact &rarr;</a>
