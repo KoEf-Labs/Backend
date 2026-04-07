@@ -9,6 +9,7 @@ import {
   generateFamilyId,
 } from "@/src/lib/jwt";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
+import { logger } from "@/src/lib/logger";
 
 export async function POST(req: Request) {
   // Rate limit
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   // Find user — use same error message for both cases to prevent user enumeration
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
+    logger.auth("login_failed", { email, reason: "user_not_found", ip });
     return NextResponse.json(
       { error: "Invalid email or password" },
       { status: 401 }
@@ -46,6 +48,7 @@ export async function POST(req: Request) {
   // Verify password
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    logger.auth("login_failed", { email, userId: user.id, reason: "wrong_password", ip });
     return NextResponse.json(
       { error: "Invalid email or password" },
       { status: 401 }
@@ -70,6 +73,8 @@ export async function POST(req: Request) {
       expiresAt: getRefreshTokenExpiry(),
     },
   });
+
+  logger.auth("login", { userId: user.id, email: user.email, ip });
 
   return NextResponse.json({
     user: {

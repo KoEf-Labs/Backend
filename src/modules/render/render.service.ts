@@ -40,6 +40,9 @@ const WORKER_PATH = path.join(
   "render-worker.tsx"
 );
 
+// Use local tsx binary directly instead of npx (avoids ~200ms npx overhead per spawn)
+const TSX_BIN = path.join(process.cwd(), "node_modules", ".bin", "tsx");
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -72,8 +75,8 @@ export class RenderService {
 
     try {
       const child = execFileAsync(
-        "npx",
-        ["tsx", WORKER_PATH, theme, "stdin"],
+        TSX_BIN,
+        [WORKER_PATH, theme, "stdin"],
         {
           cwd: process.cwd(),
           maxBuffer: 10 * 1024 * 1024, // 10MB
@@ -144,8 +147,8 @@ export class RenderService {
 
     try {
       const { stdout, stderr } = await execFileAsync(
-        "npx",
-        ["tsx", WORKER_PATH, theme, "preview"],
+        TSX_BIN,
+        [WORKER_PATH, theme, "preview"],
         {
           cwd: process.cwd(),
           maxBuffer: 10 * 1024 * 1024,

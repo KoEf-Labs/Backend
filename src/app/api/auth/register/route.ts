@@ -10,6 +10,7 @@ import {
 } from "@/src/lib/jwt";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
 import { createEmailVerificationToken } from "@/src/lib/verification";
+import { logger } from "@/src/lib/logger";
 
 export async function POST(req: Request) {
   // Rate limit
@@ -113,6 +114,8 @@ export async function POST(req: Request) {
       expiresAt: getRefreshTokenExpiry(),
     },
   });
+
+  logger.auth("register", { userId: user.id, email: user.email, ip });
 
   // Generate email verification code
   const verificationCode = await createEmailVerificationToken(user.id);
