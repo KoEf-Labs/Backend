@@ -31,11 +31,13 @@ const renderService = new RenderService();
 
 export class ProjectService {
   async getById(id: string) {
-    return prisma.project.findUnique({ where: { id } });
+    return prisma.project.findFirst({ where: { id, deletedAt: null } });
   }
 
   async getByIdForUser(id: string, userId: string) {
-    const project = await prisma.project.findUnique({ where: { id } });
+    const project = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+    });
 
     if (!project) {
       throw new ServiceError("Project not found", 404);
@@ -48,11 +50,35 @@ export class ProjectService {
     return project;
   }
 
-  async listByUser(userId: string) {
-    return prisma.project.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
-    });
+  async listByUser(
+    userId: string,
+    options?: { page?: number; limit?: number }
+  ) {
+    const page = Math.max(1, options?.page ?? 1);
+    const limit = Math.min(50, Math.max(1, options?.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const where = { userId, deletedAt: null };
+
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.project.count({ where }),
+    ]);
+
+    return {
+      projects,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**
@@ -208,14 +234,17 @@ export class ProjectService {
    */
   async listPending() {
     return prisma.project.findMany({
-      where: { status: ProjectStatus.PENDING },
+      where: { status: ProjectStatus.PENDING, deletedAt: null },
       orderBy: { updatedAt: "desc" },
     });
   }
 
   async delete(id: string, userId: string) {
     await this.getByIdForUser(id, userId);
-    return prisma.project.delete({ where: { id } });
+    return prisma.project.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 }
 

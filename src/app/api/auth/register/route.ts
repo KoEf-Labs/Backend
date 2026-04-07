@@ -9,6 +9,7 @@ import {
   generateFamilyId,
 } from "@/src/lib/jwt";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
+import { createEmailVerificationToken } from "@/src/lib/verification";
 
 export async function POST(req: Request) {
   // Rate limit
@@ -113,14 +114,24 @@ export async function POST(req: Request) {
     },
   });
 
+  // Generate email verification code
+  const verificationCode = await createEmailVerificationToken(user.id);
+
+  // TODO: Send verification email via email service
+  // For now, return the code in response (dev only)
+  console.log(`[DEV] Email verification code for ${email}: ${verificationCode}`);
+
   return NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
+      emailVerified: false,
     },
     accessToken,
     refreshToken,
+    // Remove this in production — send via email only
+    ...(process.env.NODE_ENV !== "production" && { verificationCode }),
   });
 }

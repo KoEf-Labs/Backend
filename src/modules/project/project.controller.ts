@@ -73,8 +73,16 @@ export async function handleGet(req: NextRequest, id?: string) {
       const project = await service.getByIdForUser(id, userId);
       return json(toApiResponse(project));
     }
-    const projects = await service.listByUser(userId);
-    return json(projects.map(toApiResponse));
+
+    // Pagination params
+    const page = parseInt(req.nextUrl.searchParams.get("page") ?? "1", 10);
+    const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "20", 10);
+
+    const result = await service.listByUser(userId, { page, limit });
+    return json({
+      projects: result.projects.map(toApiResponse),
+      pagination: result.pagination,
+    });
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
