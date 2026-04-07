@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
 import { getUserId as getAuthUserId, requireAdmin } from "@/src/lib/auth";
+import { DomainService } from "@/src/modules/domain";
 
 const service = new ProjectService();
+const domainService = new DomainService();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,6 +55,8 @@ function toApiResponse(project: any) {
     ...rest,
     contentJson: draftContent,
     publishedContent: publishedContent ?? null,
+    domainVerificationStatus: project.domainVerificationStatus ?? null,
+    domainVerifiedAt: project.domainVerifiedAt ?? null,
   };
 }
 
@@ -87,16 +91,35 @@ export async function handlePost(req: NextRequest) {
     const theme = validateThemeName(body.theme);
     if (!theme) return error("Invalid or unknown theme", 400);
 
+    // Validate subdomain
+    const subdomain = sanitizeSubdomain(body.subdomain);
+    if (subdomain) {
+      const validation = domainService.validateSubdomain(subdomain);
+      if (!validation.valid) return error(validation.error!, 400);
+      const available = await domainService.isSubdomainAvailable(subdomain);
+      if (!available) return error("This subdomain is already taken", 409);
+    }
+
+    // Validate custom domain
+    const customDomain = sanitizeDomain(body.customDomain);
+    if (customDomain) {
+      const validation = domainService.validateCustomDomain(customDomain);
+      if (!validation.valid) return error(validation.error!, 400);
+      const available = await domainService.isCustomDomainAvailable(customDomain);
+      if (!available) return error("This domain is already in use", 409);
+    }
+
     const project = await service.create({
       userId,
       theme,
       contentJson: body.contentJson ?? {},
-      subdomain: sanitizeSubdomain(body.subdomain),
-      customDomain: sanitizeDomain(body.customDomain),
+      subdomain,
+      customDomain,
     });
     return json(toApiResponse(project), 201);
   } catch (e: any) {
     if (e instanceof ServiceError) return error(e.message, e.status);
+    if (e?.code === "P2002") return error("This domain is already taken", 409);
     if (e?.status) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
@@ -116,15 +139,30 @@ export async function handlePatch(req: NextRequest, id: string) {
       theme = valid;
     }
 
+    // Validate subdomain if changing
+    const subdomain = sanitizeSubdomain(body.subdomain);
+    if (subdomain) {
+      const validation = domainService.validateSubdomain(subdomain);
+      if (!validation.valid) return error(validation.error!, 400);
+    }
+
+    // Validate custom domain if changing
+    const customDomain = sanitizeDomain(body.customDomain);
+    if (customDomain) {
+      const validation = domainService.validateCustomDomain(customDomain);
+      if (!validation.valid) return error(validation.error!, 400);
+    }
+
     const project = await service.update(id, userId, {
       contentJson: body.contentJson,
       theme,
-      subdomain: sanitizeSubdomain(body.subdomain),
-      customDomain: sanitizeDomain(body.customDomain),
+      subdomain,
+      customDomain,
     });
     return json(toApiResponse(project));
   } catch (e: any) {
     if (e instanceof ServiceError) return error(e.message, e.status);
+    if (e?.code === "P2002") return error("This domain is already taken", 409);
     if (e?.status) return error(e.message, e.status);
     return error("Internal server error", 500);
   }

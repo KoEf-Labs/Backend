@@ -19,6 +19,12 @@ enum ProjectStatus {
   REJECTED
 }
 
+enum DomainVerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
@@ -50,13 +56,15 @@ model Project {
   userId           String
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   theme            String
-  draftContent     Json
-  publishedContent Json?
-  status           ProjectStatus @default(DRAFT)
-  subdomain        String?       @unique
-  customDomain     String?       @unique
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  draftContent               Json
+  publishedContent           Json?
+  status                     ProjectStatus              @default(DRAFT)
+  subdomain                  String?                    @unique
+  customDomain               String?                    @unique
+  domainVerificationStatus   DomainVerificationStatus?
+  domainVerifiedAt           DateTime?
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
 
   @@index([userId])
 }
