@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/src/lib/db";
 import {
   signAccessToken,
   generateRefreshToken,
   hashToken,
   getRefreshTokenExpiry,
   generateFamilyId,
-} from "@/lib/jwt";
-import { isRateLimited, getClientIp } from "@/lib/rate-limit";
+} from "@/src/lib/jwt";
+import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
 
 export async function POST(req: Request) {
   // Rate limit
