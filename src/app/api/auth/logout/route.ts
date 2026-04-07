@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { hashToken } from "@/lib/jwt";
+import { prisma } from "@/src/lib/db";
+import { hashToken } from "@/src/lib/jwt";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
