@@ -25,6 +25,10 @@ Thumbs.db
 # Prisma
 prisma/migrations/
 
+# Uploaded files (keep directory structure, ignore content)
+public/uploads/**
+!public/uploads/.gitkeep
+
 # Logs
 *.log
 npm-debug.log*
