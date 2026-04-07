@@ -12,6 +12,13 @@ enum Role {
   ADMIN
 }
 
+enum ProjectStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
@@ -39,15 +46,17 @@ model RefreshToken {
 }
 
 model Project {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme        String
-  contentJson  Json
-  subdomain    String?  @unique
-  customDomain String?  @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme            String
+  draftContent     Json
+  publishedContent Json?
+  status           ProjectStatus @default(DRAFT)
+  subdomain        String?       @unique
+  customDomain     String?       @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   @@index([userId])
 }

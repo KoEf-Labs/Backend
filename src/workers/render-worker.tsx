@@ -9,22 +9,17 @@ import { renderToString } from "react-dom/server";
 import fs from "fs";
 import path from "path";
 
-// Static theme imports
-import Startup1 from "../../../themes/startup-1/layout";
-import Startup2 from "../../../themes/startup-2/layout";
-import Startup3 from "../../../themes/startup-3/layout";
-import Startup4 from "../../../themes/startup-4/layout";
-import Startup5 from "../../../themes/startup-5/layout";
-
-const registry: Record<string, React.ComponentType<{ data: any }>> = {
-  "startup-1": Startup1,
-  "startup-2": Startup2,
-  "startup-3": Startup3,
-  "startup-4": Startup4,
-  "startup-5": Startup5,
-};
-
 const THEMES_DIR = path.join(process.cwd(), "themes");
+
+function loadTheme(name: string): React.ComponentType<{ data: any }> | null {
+  const layoutPath = path.join(THEMES_DIR, name, "layout");
+  try {
+    const mod = require(layoutPath);
+    return mod.default || mod;
+  } catch {
+    return null;
+  }
+}
 
 // Read args
 const themeName = process.argv[2];
@@ -35,7 +30,7 @@ if (!themeName) {
   process.exit(1);
 }
 
-const Component = registry[themeName];
+const Component = loadTheme(themeName);
 if (!Component) {
   console.error(JSON.stringify({ error: `Theme "${themeName}" not found` }));
   process.exit(1);

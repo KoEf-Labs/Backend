@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
-import { getUserId as getAuthUserId } from "@/src/lib/auth";
+import { getUserId as getAuthUserId, requireAdmin } from "@/src/lib/auth";
 
 const service = new ProjectService();
 
@@ -43,21 +43,34 @@ function sanitizeDomain(value: unknown): string | undefined {
   return cleaned || undefined;
 }
 
+/**
+ * Map project DB record to API response.
+ * Mobil taraf "contentJson" bekliyor → draftContent'i contentJson olarak döndür.
+ */
+function toApiResponse(project: any) {
+  const { draftContent, publishedContent, ...rest } = project;
+  return {
+    ...rest,
+    contentJson: draftContent,
+    publishedContent: publishedContent ?? null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
 
 export async function handleGet(req: NextRequest, id?: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     if (id) {
       const project = await service.getByIdForUser(id, userId);
-      return json(project);
+      return json(toApiResponse(project));
     }
     const projects = await service.listByUser(userId);
-    return json(projects);
+    return json(projects.map(toApiResponse));
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
@@ -66,7 +79,7 @@ export async function handleGet(req: NextRequest, id?: string) {
 
 export async function handlePost(req: NextRequest) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     const body = await req.json();
@@ -81,7 +94,7 @@ export async function handlePost(req: NextRequest) {
       subdomain: sanitizeSubdomain(body.subdomain),
       customDomain: sanitizeDomain(body.customDomain),
     });
-    return json(project, 201);
+    return json(toApiResponse(project), 201);
   } catch (e: any) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     if (e?.status) return error(e.message, e.status);
@@ -91,12 +104,11 @@ export async function handlePost(req: NextRequest) {
 
 export async function handlePatch(req: NextRequest, id: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     const body = await req.json();
 
-    // If theme is being changed, validate it
     let theme: string | undefined;
     if (body.theme !== undefined) {
       const valid = validateThemeName(body.theme);
@@ -110,7 +122,7 @@ export async function handlePatch(req: NextRequest, id: string) {
       subdomain: sanitizeSubdomain(body.subdomain),
       customDomain: sanitizeDomain(body.customDomain),
     });
-    return json(project);
+    return json(toApiResponse(project));
   } catch (e: any) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     if (e?.status) return error(e.message, e.status);
@@ -120,11 +132,81 @@ export async function handlePatch(req: NextRequest, id: string) {
 
 export async function handleDelete(req: NextRequest, id: string) {
   const userId = getUserId(req);
-  if (!userId) return error("Missing x-user-id header", 401);
+  if (!userId) return error("Authentication required", 401);
 
   try {
     await service.delete(id, userId);
     return json({ deleted: true });
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Publish — user submits for review
+// ---------------------------------------------------------------------------
+
+export async function handlePublish(req: NextRequest, id: string) {
+  const userId = getUserId(req);
+  if (!userId) return error("Authentication required", 401);
+
+  try {
+    const project = await service.submitForReview(id, userId);
+    return json(toApiResponse(project));
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin — approve / reject / list pending
+// ---------------------------------------------------------------------------
+
+export async function handleAdminList(req: NextRequest) {
+  try {
+    requireAdmin(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  try {
+    const projects = await service.listPending();
+    return json(projects.map(toApiResponse));
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleAdminApprove(req: NextRequest, id: string) {
+  try {
+    requireAdmin(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  try {
+    const project = await service.approve(id);
+    return json(toApiResponse(project));
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleAdminReject(req: NextRequest, id: string) {
+  try {
+    requireAdmin(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const project = await service.reject(id, body.reason);
+    return json(toApiResponse(project));
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);

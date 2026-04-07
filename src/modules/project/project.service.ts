@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma, ProjectStatus } from "@prisma/client";
 import { ContentValidator } from "../theme/content-validator";
 
 // ---------------------------------------------------------------------------
@@ -55,9 +55,7 @@ export class ProjectService {
 
   /**
    * Create a new project.
-   * 1. Sanitize content (strip XSS)
-   * 2. Validate (reject type/length errors)
-   * 3. Save
+   * Content goes to draftContent, status starts as DRAFT.
    */
   async create(input: CreateProjectInput) {
     if (!input.userId || !input.theme) {
@@ -65,13 +63,11 @@ export class ProjectService {
     }
 
     if (input.contentJson && typeof input.contentJson === "object") {
-      // Sanitize first — clean dangerous HTML
       const sanitized = validator.sanitizeContent(
         input.theme,
         input.contentJson as Record<string, unknown>
       );
 
-      // Validate the sanitized content — only hard errors (type, length) reject
       const result = validator.validateContent(input.theme, sanitized);
       const hardErrors = result.errors.filter((e) => e.type !== "xss");
       if (hardErrors.length > 0) {
@@ -89,7 +85,8 @@ export class ProjectService {
       data: {
         userId: input.userId,
         theme: input.theme,
-        contentJson: input.contentJson ?? {},
+        draftContent: input.contentJson ?? {},
+        status: ProjectStatus.DRAFT,
         subdomain: input.subdomain || null,
         customDomain: input.customDomain || null,
       },
@@ -97,23 +94,19 @@ export class ProjectService {
   }
 
   /**
-   * Update a project.
-   * 1. Sanitize content (strip XSS)
-   * 2. Validate (reject type/length errors)
-   * 3. Update
+   * Update draft content. Editing always targets draftContent.
+   * If project was PUBLISHED, status goes back to DRAFT (new edits need re-publish).
    */
   async update(id: string, userId: string, input: UpdateProjectInput) {
     const project = await this.getByIdForUser(id, userId);
     const theme = input.theme || project.theme;
 
     if (input.contentJson && typeof input.contentJson === "object") {
-      // Sanitize first
       const sanitized = validator.sanitizeContent(
         theme,
         input.contentJson as Record<string, unknown>
       );
 
-      // Validate — only hard errors reject
       const result = validator.validateContent(theme, sanitized);
       const hardErrors = result.errors.filter((e) => e.type !== "xss");
       if (hardErrors.length > 0) {
@@ -127,18 +120,86 @@ export class ProjectService {
       input.contentJson = sanitized as Prisma.InputJsonValue;
     }
 
+    // If content changed, reset status to DRAFT
+    const shouldResetStatus =
+      input.contentJson !== undefined && project.status !== ProjectStatus.DRAFT;
+
     return prisma.project.update({
       where: { id },
       data: {
         ...(input.contentJson !== undefined && {
-          contentJson: input.contentJson,
+          draftContent: input.contentJson,
         }),
         ...(input.theme !== undefined && { theme: input.theme }),
         ...(input.subdomain !== undefined && { subdomain: input.subdomain }),
         ...(input.customDomain !== undefined && {
           customDomain: input.customDomain,
         }),
+        ...(shouldResetStatus && { status: ProjectStatus.DRAFT }),
       },
+    });
+  }
+
+  /**
+   * Submit project for review. status: DRAFT → PENDING
+   */
+  async submitForReview(id: string, userId: string) {
+    const project = await this.getByIdForUser(id, userId);
+
+    if (project.status === ProjectStatus.PENDING) {
+      throw new ServiceError("Project is already pending review", 400);
+    }
+
+    return prisma.project.update({
+      where: { id },
+      data: { status: ProjectStatus.PENDING },
+    });
+  }
+
+  /**
+   * Admin: approve project. draftContent → publishedContent, status → PUBLISHED
+   */
+  async approve(id: string) {
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) throw new ServiceError("Project not found", 404);
+
+    if (project.status !== ProjectStatus.PENDING) {
+      throw new ServiceError("Only pending projects can be approved", 400);
+    }
+
+    return prisma.project.update({
+      where: { id },
+      data: {
+        publishedContent: project.draftContent,
+        status: ProjectStatus.PUBLISHED,
+      },
+    });
+  }
+
+  /**
+   * Admin: reject project. status → REJECTED
+   */
+  async reject(id: string, reason?: string) {
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) throw new ServiceError("Project not found", 404);
+
+    if (project.status !== ProjectStatus.PENDING) {
+      throw new ServiceError("Only pending projects can be rejected", 400);
+    }
+
+    return prisma.project.update({
+      where: { id },
+      data: { status: ProjectStatus.REJECTED },
+    });
+  }
+
+  /**
+   * Admin: list all pending projects for review.
+   */
+  async listPending() {
+    return prisma.project.findMany({
+      where: { status: ProjectStatus.PENDING },
+      orderBy: { updatedAt: "desc" },
     });
   }
 

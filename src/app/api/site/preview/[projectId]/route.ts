@@ -15,38 +15,57 @@ function error(message: string, status: number) {
 }
 
 /**
- * GET /api/preview/:projectId
+ * GET /api/site/preview/:projectId
  *
- * Requires authentication. Fetches project, verifies ownership,
- * renders theme with contentJson, returns HTML.
+ * Two modes:
+ * - Authenticated (JWT) or ?draft=true → owner preview, renders draftContent
+ * - Public (no auth) → renders publishedContent only
  */
 export async function GET(req: NextRequest, { params }: Params) {
   const { projectId } = await params;
   const userId = getUserId(req);
+  const isDraftPreview = req.nextUrl.searchParams.get("draft") === "true";
 
-  if (!userId) {
-    return error("Authentication required", 401);
-  }
-
-  // 1. Fetch project with ownership check
+  // 1. Fetch project
   let project;
   try {
-    project = await projectService.getByIdForUser(projectId, userId);
+    if (userId) {
+      project = await projectService.getByIdForUser(projectId, userId);
+    } else {
+      project = await projectService.getById(projectId);
+      if (!project) {
+        return error("Project not found", 404);
+      }
+    }
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Failed to fetch project", 500);
   }
 
-  // 2. Validate project has a theme
+  // 2. Determine which content to render
+  let content: Record<string, unknown>;
+
+  if (userId || isDraftPreview) {
+    // Owner preview → show draftContent
+    content = project.draftContent as Record<string, unknown>;
+  } else {
+    // Public view → only show publishedContent
+    if (!project.publishedContent) {
+      return error("This site is not published yet", 404);
+    }
+    content = project.publishedContent as Record<string, unknown>;
+  }
+
+  // 3. Validate project has a theme
   if (!project.theme) {
     return error("Project has no theme assigned", 400);
   }
 
-  // 3. Render HTML
+  // 4. Render HTML
   try {
     const result = await renderService.renderTheme({
       theme: project.theme,
-      content: project.contentJson as Record<string, unknown>,
+      content,
     });
 
     return new NextResponse(result.html, {
@@ -56,6 +75,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         "X-Theme": project.theme,
         "X-Project-Id": project.id,
         "X-Rendered-At": result.renderedAt,
+        "X-Status": project.status,
       },
     });
   } catch (e) {
