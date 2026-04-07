@@ -67,6 +67,13 @@ async function main() {
   const element = React.createElement(Component, { data: content });
   const body = renderToString(element);
 
+  // Use prebuilt CSS if available, fallback to CDN
+  const stylesPath = path.join(THEMES_DIR, themeName, "styles.css");
+  const hasPrebuiltCss = fs.existsSync(stylesPath);
+  const cssTag = hasPrebuiltCss
+    ? `<style>${fs.readFileSync(stylesPath, "utf-8")}</style>`
+    : `<script src="https://cdn.tailwindcss.com"></script>`;
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -74,7 +81,7 @@ async function main() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="${escapeHtml(description)}" />
   <title>${escapeHtml(title)}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  ${cssTag}
   <style>html{scroll-behavior:smooth}body{-webkit-font-smoothing:antialiased}</style>
 </head>
 <body>

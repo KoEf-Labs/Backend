@@ -7,6 +7,7 @@ import {
   getRefreshTokenExpiry,
 } from "@/src/lib/jwt";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
+import { logger } from "@/src/lib/logger";
 
 export async function POST(req: Request) {
   // Rate limit
@@ -73,6 +74,11 @@ export async function POST(req: Request) {
 
   if (familyCount > 0) {
     // Multiple tokens in same family = replay attack detected
+    logger.security("refresh_token_replay", {
+      userId: storedToken.userId,
+      familyId,
+      ip,
+    });
     // Invalidate entire family — force re-login
     await prisma.refreshToken.deleteMany({ where: { familyId } });
     return NextResponse.json(
