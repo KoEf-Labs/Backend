@@ -46,19 +46,30 @@ function sanitizeDomain(value: unknown): string | undefined {
 
 /**
  * Validate theme name format AND existence.
- * Returns clean theme name or null if invalid.
  */
 function validateThemeName(value: unknown): string | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== "string") return null;
   const cleaned = value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 50);
   if (!cleaned) return null;
-  // Check theme folder exists
   const themeDir = path.join(THEMES_DIR, cleaned);
   if (!fs.existsSync(themeDir) || !fs.statSync(themeDir).isDirectory()) {
     return null;
   }
   return cleaned;
+}
+
+/**
+ * Map project DB record to API response.
+ * Mobil taraf "contentJson" bekliyor → draftContent'i contentJson olarak döndür.
+ */
+function toApiResponse(project: any) {
+  const { draftContent, publishedContent, ...rest } = project;
+  return {
+    ...rest,
+    contentJson: draftContent,
+    publishedContent: publishedContent ?? null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -72,10 +83,10 @@ export async function handleGet(req: NextRequest, id?: string) {
   try {
     if (id) {
       const project = await service.getByIdForUser(id, userId);
-      return json(project);
+      return json(toApiResponse(project));
     }
     const projects = await service.listByUser(userId);
-    return json(projects);
+    return json(projects.map(toApiResponse));
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
@@ -99,7 +110,7 @@ export async function handlePost(req: NextRequest) {
       subdomain: sanitizeSubdomain(body.subdomain),
       customDomain: sanitizeDomain(body.customDomain),
     });
-    return json(project, 201);
+    return json(toApiResponse(project), 201);
   } catch (e: any) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     if (e?.status) return error(e.message, e.status);
@@ -114,7 +125,6 @@ export async function handlePatch(req: NextRequest, id: string) {
   try {
     const body = await req.json();
 
-    // If theme is being changed, validate it
     let theme: string | undefined;
     if (body.theme !== undefined) {
       const valid = validateThemeName(body.theme);
@@ -128,7 +138,7 @@ export async function handlePatch(req: NextRequest, id: string) {
       subdomain: sanitizeSubdomain(body.subdomain),
       customDomain: sanitizeDomain(body.customDomain),
     });
-    return json(project);
+    return json(toApiResponse(project));
   } catch (e: any) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     if (e?.status) return error(e.message, e.status);
@@ -143,6 +153,58 @@ export async function handleDelete(req: NextRequest, id: string) {
   try {
     await service.delete(id, userId);
     return json({ deleted: true });
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Publish — user submits for review
+// ---------------------------------------------------------------------------
+
+export async function handlePublish(req: NextRequest, id: string) {
+  const userId = getUserId(req);
+  if (!userId) return error("Missing x-user-id header", 401);
+
+  try {
+    const project = await service.submitForReview(id, userId);
+    return json(toApiResponse(project));
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin — approve / reject / list pending
+// ---------------------------------------------------------------------------
+
+export async function handleAdminList() {
+  try {
+    const projects = await service.listPending();
+    return json(projects.map(toApiResponse));
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleAdminApprove(id: string) {
+  try {
+    const project = await service.approve(id);
+    return json(toApiResponse(project));
+  } catch (e) {
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleAdminReject(req: NextRequest, id: string) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const project = await service.reject(id, body.reason);
+    return json(toApiResponse(project));
   } catch (e) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);

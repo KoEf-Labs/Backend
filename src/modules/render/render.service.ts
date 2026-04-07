@@ -32,7 +32,6 @@ const WORKER_PATH = path.join(
   "workers",
   "render-worker.tsx"
 );
-);
 
 // ---------------------------------------------------------------------------
 // Service

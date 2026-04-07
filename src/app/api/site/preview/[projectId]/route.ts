@@ -14,13 +14,11 @@ function error(message: string, status: number) {
 }
 
 /**
- * GET /api/preview/:projectId
+ * GET /api/site/preview/:projectId
  *
- * Public endpoint — no auth required.
- * Fetches project from DB, renders theme with contentJson, returns HTML.
- *
- * Optional: pass x-user-id header to verify ownership.
- * Without it, renders any project (useful for browser preview & WebView).
+ * Two modes:
+ * - With x-user-id header → owner preview, renders draftContent (for editor preview)
+ * - Without x-user-id header → public view, renders publishedContent only
  */
 export async function GET(req: NextRequest, { params }: Params) {
   const { projectId } = await params;
@@ -30,10 +28,8 @@ export async function GET(req: NextRequest, { params }: Params) {
   let project;
   try {
     if (userId) {
-      // If auth header provided, verify ownership
       project = await projectService.getByIdForUser(projectId, userId);
     } else {
-      // Public preview — fetch without ownership check
       project = await projectService.getById(projectId);
       if (!project) {
         return error("Project not found", 404);
@@ -44,16 +40,33 @@ export async function GET(req: NextRequest, { params }: Params) {
     return error("Failed to fetch project", 500);
   }
 
-  // 2. Validate project has a theme
+  // 2. Determine which content to render
+  //    ?draft=true → owner draft preview (WebView can't send headers)
+  //    Otherwise without auth → public published view
+  const isDraftPreview = req.nextUrl.searchParams.get("draft") === "true";
+  let content: Record<string, unknown>;
+
+  if (userId || isDraftPreview) {
+    // Owner preview → show draftContent
+    content = project.draftContent as Record<string, unknown>;
+  } else {
+    // Public view → only show publishedContent
+    if (!project.publishedContent) {
+      return error("This site is not published yet", 404);
+    }
+    content = project.publishedContent as Record<string, unknown>;
+  }
+
+  // 3. Validate project has a theme
   if (!project.theme) {
     return error("Project has no theme assigned", 400);
   }
 
-  // 3. Render HTML
+  // 4. Render HTML
   try {
     const result = await renderService.renderTheme({
       theme: project.theme,
-      content: project.contentJson as Record<string, unknown>,
+      content,
     });
 
     return new NextResponse(result.html, {
@@ -63,6 +76,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         "X-Theme": project.theme,
         "X-Project-Id": project.id,
         "X-Rendered-At": result.renderedAt,
+        "X-Status": project.status,
       },
     });
   } catch (e) {

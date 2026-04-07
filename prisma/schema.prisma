@@ -7,15 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ProjectStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
 model Project {
-  id           String   @id @default(uuid())
-  userId       String
-  theme        String
-  contentJson  Json
-  subdomain    String?  @unique
-  customDomain String?  @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String        @id @default(uuid())
+  userId           String
+  theme            String
+  draftContent     Json
+  publishedContent Json?
+  status           ProjectStatus @default(DRAFT)
+  subdomain        String?       @unique
+  customDomain     String?       @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   @@index([userId])
 }
