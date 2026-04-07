@@ -68,10 +68,17 @@ export async function GET(req: NextRequest, { params }: Params) {
       content,
     });
 
+    // Published public pages get browser cache, drafts don't
+    const cacheControl =
+      !userId && !isDraftPreview
+        ? "public, max-age=300, stale-while-revalidate=60"
+        : "no-cache, no-store";
+
     return new NextResponse(result.html, {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": cacheControl,
         "X-Theme": project.theme,
         "X-Project-Id": project.id,
         "X-Rendered-At": result.renderedAt,
