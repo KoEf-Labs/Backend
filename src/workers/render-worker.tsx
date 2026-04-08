@@ -45,7 +45,13 @@ async function main() {
     for await (const chunk of process.stdin) {
       chunks.push(chunk);
     }
-    content = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+    const raw = Buffer.concat(chunks).toString("utf-8");
+    try {
+      content = JSON.parse(raw);
+    } catch {
+      console.error(JSON.stringify({ error: "Invalid JSON input on stdin" }));
+      process.exit(1);
+    }
   } else {
     // Use mockData.json
     const mockPath = path.join(THEMES_DIR, themeName, "mockData.json");

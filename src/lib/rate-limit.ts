@@ -13,7 +13,7 @@ const store = new Map<string, RateLimitEntry>();
 const WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_ATTEMPTS = 5;
 
-/** Returns true if the request should be blocked */
+/** Returns true if the request should be blocked (auth: 5/min) */
 export function isRateLimited(key: string): boolean {
   const now = Date.now();
   const entry = store.get(key);
@@ -57,12 +57,35 @@ export function getClientIp(req: Request): string {
   return req.headers.get("x-real-ip") || "unknown";
 }
 
+/**
+ * Rate limiter for compute-heavy endpoints (render: 10/min).
+ * Uses separate store to avoid interference with auth limiter.
+ */
+const renderStore = new Map<string, RateLimitEntry>();
+const RENDER_MAX = 10;
+
+export function isRenderRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = renderStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    renderStore.set(key, { attempts: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+
+  entry.attempts++;
+  return entry.attempts > RENDER_MAX;
+}
+
 // Cleanup old entries every 5 minutes
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of store) {
       if (now > entry.resetAt) store.delete(key);
+    }
+    for (const [key, entry] of renderStore) {
+      if (now > entry.resetAt) renderStore.delete(key);
     }
   }, 5 * 60 * 1000);
 }
