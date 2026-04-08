@@ -10,6 +10,7 @@ import {
 } from "@/src/lib/jwt";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
 import { createEmailVerificationToken } from "@/src/lib/verification";
+import { sendVerificationEmail } from "@/src/lib/email";
 import { logger } from "@/src/lib/logger";
 
 export async function POST(req: Request) {
@@ -37,8 +38,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // Email validation
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Email validation — requires at least 2-char TLD and proper format
+  const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/;
   const MAX_EMAIL_LENGTH = 254;
   if (
     typeof email !== "string" ||
@@ -120,10 +121,8 @@ export async function POST(req: Request) {
   // Generate email verification code
   const verificationCode = await createEmailVerificationToken(user.id);
 
-  // TODO: Send verification email via email service
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[DEV] Email verification code for ${email}: ${verificationCode}`);
-  }
+  // Send verification email (console in dev, real provider in prod)
+  await sendVerificationEmail(email, verificationCode);
 
   return NextResponse.json({
     user: {

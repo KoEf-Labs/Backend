@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { createPasswordResetToken } from "@/src/lib/verification";
+import { sendPasswordResetEmail } from "@/src/lib/email";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
 
 export async function POST(req: Request) {
@@ -28,10 +29,8 @@ export async function POST(req: Request) {
   if (user) {
     const token = await createPasswordResetToken(user.id);
 
-    // TODO: Send password reset email with link containing token
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[DEV] Password reset token for ${user.email}: ${token.slice(0, 8)}...`);
-    }
+    // Send reset email (console in dev, real provider in prod)
+    await sendPasswordResetEmail(user.email, token);
   }
 
   // Same response whether user exists or not
