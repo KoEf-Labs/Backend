@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
 import { MAX_CONTENT_SIZE } from "@/src/shared/constants";
-import { getUserId as getAuthUserId, requireAdmin } from "@/src/lib/auth";
+import { getUserId as getAuthUserId, requireAdmin, AuthError } from "@/src/lib/auth";
 import { DomainService } from "@/src/modules/domain";
 
 const service = new ProjectService();
@@ -20,8 +20,10 @@ function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function getUserId(req: NextRequest): string | null {
-  return getAuthUserId(req);
+function requireUserId(req: NextRequest): string {
+  const userId = getAuthUserId(req);
+  if (!userId) throw new AuthError("Authentication required", 401);
+  return userId;
 }
 
 function sanitizeSubdomain(value: unknown): string | undefined {
@@ -67,8 +69,7 @@ function toApiResponse(project: any) {
 // ---------------------------------------------------------------------------
 
 export async function handleGet(req: NextRequest, id?: string) {
-  const userId = getUserId(req);
-  if (!userId) return error("Authentication required", 401);
+  const userId = requireUserId(req);
 
   try {
     if (id) {
@@ -86,14 +87,14 @@ export async function handleGet(req: NextRequest, id?: string) {
       pagination: result.pagination,
     });
   } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
 }
 
 export async function handlePost(req: NextRequest) {
-  const userId = getUserId(req);
-  if (!userId) return error("Authentication required", 401);
+  const userId = requireUserId(req);
 
   try {
     const body = await req.json();
@@ -144,8 +145,7 @@ export async function handlePost(req: NextRequest) {
 }
 
 export async function handlePatch(req: NextRequest, id: string) {
-  const userId = getUserId(req);
-  if (!userId) return error("Authentication required", 401);
+  const userId = requireUserId(req);
 
   try {
     const body = await req.json();
@@ -195,13 +195,13 @@ export async function handlePatch(req: NextRequest, id: string) {
 }
 
 export async function handleDelete(req: NextRequest, id: string) {
-  const userId = getUserId(req);
-  if (!userId) return error("Authentication required", 401);
+  const userId = requireUserId(req);
 
   try {
     await service.delete(id, userId);
     return json({ deleted: true });
   } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
@@ -212,13 +212,13 @@ export async function handleDelete(req: NextRequest, id: string) {
 // ---------------------------------------------------------------------------
 
 export async function handlePublish(req: NextRequest, id: string) {
-  const userId = getUserId(req);
-  if (!userId) return error("Authentication required", 401);
+  const userId = requireUserId(req);
 
   try {
     const project = await service.submitForReview(id, userId);
     return json(toApiResponse(project));
   } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
@@ -239,6 +239,7 @@ export async function handleAdminList(req: NextRequest) {
     const projects = await service.listPending();
     return json(projects.map(toApiResponse));
   } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
@@ -255,6 +256,7 @@ export async function handleAdminApprove(req: NextRequest, id: string) {
     const project = await service.approve(id);
     return json(toApiResponse(project));
   } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
@@ -272,6 +274,7 @@ export async function handleAdminReject(req: NextRequest, id: string) {
     const project = await service.reject(id, body.reason);
     return json(toApiResponse(project));
   } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }

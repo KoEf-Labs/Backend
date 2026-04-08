@@ -26,8 +26,9 @@ export async function GET(_req: Request, { params }: Params) {
 
   const data = JSON.parse(fs.readFileSync(mockPath, "utf-8"));
 
-  // Theme-specific colors
-  const colors: Record<string, { bg: string; accent: string; text: string; card: string }> = {
+  // Theme-specific colors — try reading from meta.json, fallback to hardcoded
+  const DEFAULT_COLORS = { bg: "#ffffff", accent: "#6366f1", text: "#111827", card: "#f3f4f6" };
+  const KNOWN_COLORS: Record<string, typeof DEFAULT_COLORS> = {
     "startup-1": { bg: "#ffffff", accent: "#6366f1", text: "#111827", card: "#f3f4f6" },
     "startup-2": { bg: "#0f172a", accent: "#8b5cf6", text: "#ffffff", card: "rgba(255,255,255,0.05)" },
     "startup-3": { bg: "#020617", accent: "#06b6d4", text: "#ffffff", card: "rgba(6,182,212,0.08)" },
@@ -35,7 +36,14 @@ export async function GET(_req: Request, { params }: Params) {
     "startup-5": { bg: "#ffffff", accent: "#64748b", text: "#111827", card: "#f8fafc" },
   };
 
-  const c = colors[name] || colors["startup-1"]!;
+  // Try meta.json first (future-proof), fallback to known colors, then default
+  let c = DEFAULT_COLORS;
+  const metaPath = path.join(themesDir, name, "meta.json");
+  if (fs.existsSync(metaPath)) {
+    try { c = JSON.parse(fs.readFileSync(metaPath, "utf-8")).colors || c; } catch {}
+  } else {
+    c = KNOWN_COLORS[name] || DEFAULT_COLORS;
+  }
   const heroTitle = data.hero?.title || data.hero?.slides?.[0]?.title || "Website";
   const heroSub = data.hero?.subtitle || data.hero?.slides?.[0]?.subtitle || "";
   const logo = data.navbar?.logo || name;
