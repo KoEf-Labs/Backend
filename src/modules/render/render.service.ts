@@ -93,9 +93,11 @@ export class RenderService {
       if (stderr) {
         try {
           const err = JSON.parse(stderr);
-          throw new RenderError(err.error, 500);
+          throw new RenderError(err.error || "Render worker error", 500);
         } catch (e) {
           if (e instanceof RenderError) throw e;
+          // stderr wasn't valid JSON — treat the raw text as the error
+          throw new RenderError(`Render worker error: ${stderr.slice(0, 200)}`, 500);
         }
       }
 
@@ -159,9 +161,10 @@ export class RenderService {
       if (stderr) {
         try {
           const err = JSON.parse(stderr);
-          throw new RenderError(err.error, 500);
+          throw new RenderError(err.error || "Render worker error", 500);
         } catch (e) {
           if (e instanceof RenderError) throw e;
+          throw new RenderError(`Render worker error: ${stderr.slice(0, 200)}`, 500);
         }
       }
 

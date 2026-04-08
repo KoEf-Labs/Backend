@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RenderService, RenderError } from "./render.service";
+import { isRenderRateLimited, getClientIp } from "@/src/lib/rate-limit";
 
 const service = new RenderService();
 
@@ -23,6 +24,11 @@ function error(message: string, status: number) {
 // ---------------------------------------------------------------------------
 
 export async function handleRender(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (isRenderRateLimited(`render:${ip}`)) {
+    return error("Too many render requests. Please try again later.", 429);
+  }
+
   try {
     const body = await req.json();
 
@@ -31,10 +37,10 @@ export async function handleRender(req: NextRequest) {
 
     const format = req.nextUrl.searchParams.get("format");
 
-    const result = await service.renderTheme(
-      { theme: body.theme, content: body.content },
-      { title: body.title, description: body.description }
-    );
+    const result = await service.renderTheme({
+      theme: body.theme,
+      content: body.content,
+    });
 
     // ?format=json → return metadata + html as JSON
     if (format === "json") {
