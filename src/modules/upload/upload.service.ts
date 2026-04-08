@@ -31,6 +31,10 @@ const ALLOWED_TYPES: Record<string, { mimes: string[]; magicBytes: number[][] }>
       [0x47, 0x49, 0x46, 0x38, 0x39], // GIF89a
     ],
   },
+  heic: {
+    mimes: ["image/heic", "image/heif"],
+    magicBytes: [], // HEIC uses ftyp box at offset 4 — checked separately
+  },
 };
 
 const ALL_ALLOWED_MIMES = Object.values(ALLOWED_TYPES).flatMap((t) => t.mimes);
@@ -61,17 +65,22 @@ export class UploadService {
     originalName: string,
     mimeType: string
   ): Promise<{ url: string; size: number; width: number; height: number }> {
-    // 1. MIME type check
-    if (!ALL_ALLOWED_MIMES.includes(mimeType)) {
+    // 1. MIME type check — allow known types + application/octet-stream (iOS fallback)
+    const isKnownMime = ALL_ALLOWED_MIMES.includes(mimeType);
+    const isGenericMime = mimeType === "application/octet-stream" || mimeType === "";
+
+    if (!isKnownMime && !isGenericMime) {
       throw new UploadError(
-        `Unsupported file type: ${mimeType}. Allowed: JPEG, PNG, WebP, GIF`,
+        `Unsupported file type: ${mimeType}. Allowed: JPEG, PNG, WebP, GIF, HEIC`,
         400
       );
     }
 
     // 2. Magic bytes check (don't trust MIME alone)
-    if (!this.verifyMagicBytes(fileBuffer)) {
-      throw new UploadError("File content does not match its type", 400);
+    // For generic MIME (iOS), try all known magic bytes
+    const effectiveMime = isGenericMime ? "" : mimeType;
+    if (!this.verifyMagicBytes(fileBuffer, effectiveMime)) {
+      throw new UploadError("File content does not match a supported image format", 400);
     }
 
     // 3. Size check
@@ -125,10 +134,21 @@ export class UploadService {
     };
   }
 
-  private verifyMagicBytes(buffer: Buffer): boolean {
+  private verifyMagicBytes(buffer: Buffer, mimeType: string): boolean {
+    // HEIC/HEIF: check for 'ftyp' at offset 4
+    if (mimeType === "image/heic" || mimeType === "image/heif" || mimeType === "") {
+      if (buffer.length >= 8) {
+        const ftyp = buffer.toString("ascii", 4, 8);
+        if (ftyp === "ftyp") return true;
+      }
+      // If not HEIC, fall through to standard check (for generic MIME)
+      if (mimeType !== "") return false;
+    }
+
+    // Standard magic byte check
     for (const type of Object.values(ALLOWED_TYPES)) {
       for (const magic of type.magicBytes) {
-        if (buffer.length >= magic.length) {
+        if (magic.length > 0 && buffer.length >= magic.length) {
           const match = magic.every((byte, i) => buffer[i] === byte);
           if (match) return true;
         }

@@ -8,9 +8,11 @@ export interface EmailProvider {
 }
 
 class ConsoleEmailProvider implements EmailProvider {
-  async sendEmail(to: string, subject: string, _html: string) {
+  async sendEmail(to: string, subject: string, html: string) {
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[EMAIL] To: ${to} | Subject: ${subject}`);
+      // Strip HTML tags to show readable content in console
+      const text = html.replace(/<[^>]+>/g, "").trim();
+      console.log(`\n📧 [EMAIL] To: ${to}\n   Subject: ${subject}\n   Content: ${text}\n`);
     }
   }
 }
