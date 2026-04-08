@@ -225,7 +225,10 @@ export class ProjectService {
 
     return prisma.project.update({
       where: { id },
-      data: { status: ProjectStatus.REJECTED },
+      data: {
+        status: ProjectStatus.REJECTED,
+        rejectReason: reason?.slice(0, 500) || null,
+      },
     });
   }
 

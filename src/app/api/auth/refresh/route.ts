@@ -57,45 +57,48 @@ export async function POST(req: Request) {
     );
   }
 
-  // Token rotation: delete old token, issue new one in same family.
-  // If the old token is reused after rotation, it won't be found (deleted above),
-  // so the attacker gets rejected. To fully protect against stolen tokens,
-  // invalidate the entire family if a deleted token's family is still active.
+  // Token rotation in a transaction to prevent race conditions.
+  // Delete old → check family → create new happens atomically.
   const familyId = storedToken.familyId;
+  const newRefreshToken = generateRefreshToken();
 
-  // Delete the used token
-  await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+  const rotationResult = await prisma.$transaction(async (tx) => {
+    // Delete the used token
+    await tx.refreshToken.delete({ where: { id: storedToken.id } });
 
-  // Check if there are other tokens in this family that shouldn't exist
-  // (indicates a previously rotated token was somehow reused in parallel)
-  const familyCount = await prisma.refreshToken.count({
-    where: { familyId },
+    // Check if other tokens in this family exist (replay attack indicator)
+    const familyCount = await tx.refreshToken.count({ where: { familyId } });
+
+    if (familyCount > 0) {
+      // Multiple tokens in same family = replay attack detected
+      logger.security("refresh_token_replay", {
+        userId: storedToken.userId,
+        familyId,
+        ip,
+      });
+      await tx.refreshToken.deleteMany({ where: { familyId } });
+      return { compromised: true };
+    }
+
+    // Create new token in same family
+    await tx.refreshToken.create({
+      data: {
+        tokenHash: hashToken(newRefreshToken),
+        userId: storedToken.userId,
+        familyId,
+        expiresAt: getRefreshTokenExpiry(),
+      },
+    });
+
+    return { compromised: false };
   });
 
-  if (familyCount > 0) {
-    // Multiple tokens in same family = replay attack detected
-    logger.security("refresh_token_replay", {
-      userId: storedToken.userId,
-      familyId,
-      ip,
-    });
-    // Invalidate entire family — force re-login
-    await prisma.refreshToken.deleteMany({ where: { familyId } });
+  if (rotationResult.compromised) {
     return NextResponse.json(
       { error: "Session compromised. Please login again." },
       { status: 401 }
     );
   }
-
-  const newRefreshToken = generateRefreshToken();
-  await prisma.refreshToken.create({
-    data: {
-      tokenHash: hashToken(newRefreshToken),
-      userId: storedToken.userId,
-      familyId,
-      expiresAt: getRefreshTokenExpiry(),
-    },
-  });
 
   const accessToken = signAccessToken({
     sub: storedToken.user.id,
