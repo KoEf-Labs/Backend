@@ -2,6 +2,40 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+// ---------------------------------------------------------------------------
+// URL Sanitization (single source of truth)
+// ---------------------------------------------------------------------------
+
+const SAFE_URL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+
+/** Block dangerous URL protocols. Returns "#" if unsafe. */
+export function safeUrl(url: unknown): string {
+  if (typeof url !== "string" || !url.trim()) return "#";
+  const trimmed = url.trim();
+  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (!SAFE_URL_PROTOCOLS.has(parsed.protocol)) return "#";
+    return trimmed;
+  } catch {
+    if (/^[a-z]+:/i.test(trimmed)) return "#";
+    return trimmed;
+  }
+}
+
+/** Only allow https for iframe embeds. Returns "" if unsafe. */
+export function safeEmbedUrl(url: unknown): string {
+  if (typeof url !== "string" || !url.trim()) return "";
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:") return "";
+    return trimmed;
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Shared API response helpers.
  */

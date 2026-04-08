@@ -80,6 +80,7 @@ model Project {
   status                     ProjectStatus              @default(DRAFT)
   subdomain                  String?                    @unique
   customDomain               String?                    @unique
+  rejectReason               String?
   domainVerificationStatus   DomainVerificationStatus?
   domainVerifiedAt           DateTime?
   deletedAt                  DateTime?

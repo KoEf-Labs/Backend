@@ -121,8 +121,9 @@ export async function POST(req: Request) {
   const verificationCode = await createEmailVerificationToken(user.id);
 
   // TODO: Send verification email via email service
-  // For now, return the code in response (dev only)
-  console.log(`[DEV] Email verification code for ${email}: ${verificationCode}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DEV] Email verification code for ${email}: ${verificationCode}`);
+  }
 
   return NextResponse.json({
     user: {
@@ -134,7 +135,5 @@ export async function POST(req: Request) {
     },
     accessToken,
     refreshToken,
-    // Remove this in production — send via email only
-    ...(process.env.NODE_ENV !== "production" && { verificationCode }),
   });
 }

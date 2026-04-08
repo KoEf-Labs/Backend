@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
+import { MAX_CONTENT_SIZE } from "@/src/shared/constants";
 import { getUserId as getAuthUserId, requireAdmin } from "@/src/lib/auth";
 import { DomainService } from "@/src/modules/domain";
 
@@ -55,6 +56,7 @@ function toApiResponse(project: any) {
     ...rest,
     contentJson: draftContent,
     publishedContent: publishedContent ?? null,
+    rejectReason: project.rejectReason ?? null,
     domainVerificationStatus: project.domainVerificationStatus ?? null,
     domainVerifiedAt: project.domainVerifiedAt ?? null,
   };
@@ -99,6 +101,14 @@ export async function handlePost(req: NextRequest) {
     const theme = validateThemeName(body.theme);
     if (!theme) return error("Invalid or unknown theme", 400);
 
+    // Content size check
+    if (body.contentJson) {
+      const contentSize = JSON.stringify(body.contentJson).length;
+      if (contentSize > MAX_CONTENT_SIZE) {
+        return error(`Content too large (${(contentSize / 1024 / 1024).toFixed(1)}MB). Max: 2MB`, 400);
+      }
+    }
+
     // Validate subdomain
     const subdomain = sanitizeSubdomain(body.subdomain);
     if (subdomain) {
@@ -139,6 +149,14 @@ export async function handlePatch(req: NextRequest, id: string) {
 
   try {
     const body = await req.json();
+
+    // Content size check
+    if (body.contentJson) {
+      const contentSize = JSON.stringify(body.contentJson).length;
+      if (contentSize > MAX_CONTENT_SIZE) {
+        return error(`Content too large (${(contentSize / 1024 / 1024).toFixed(1)}MB). Max: 2MB`, 400);
+      }
+    }
 
     let theme: string | undefined;
     if (body.theme !== undefined) {

@@ -29,7 +29,9 @@ export async function POST(req: Request) {
     const token = await createPasswordResetToken(user.id);
 
     // TODO: Send password reset email with link containing token
-    console.log(`[DEV] Password reset token for ${user.email}: ${token}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[DEV] Password reset token for ${user.email}: ${token.slice(0, 8)}...`);
+    }
   }
 
   // Same response whether user exists or not

@@ -1,5 +1,6 @@
 import sanitizeHtml from "sanitize-html";
 import { SchemaService, SchemaField, SchemaGroup } from "./schema.service";
+import { safeUrl } from "@/src/shared/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,9 +32,6 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   disallowedTagsMode: "discard",
 };
 
-// Dangerous URL protocols — anything not in this list is blocked
-const SAFE_URL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
-
 // Additional XSS patterns that encoding tricks might bypass
 const XSS_PATTERNS = [
   /<script/i,
@@ -48,51 +46,6 @@ const XSS_PATTERNS = [
   /vbscript\s*:/i,
   /data\s*:\s*text\/html/i,
 ];
-
-// ---------------------------------------------------------------------------
-// URL Sanitization (used by themes via import)
-// ---------------------------------------------------------------------------
-
-/**
- * Sanitize a URL — block dangerous protocols.
- * Returns "#" if URL is unsafe.
- */
-export function safeUrl(url: unknown): string {
-  if (typeof url !== "string" || !url.trim()) return "#";
-
-  const trimmed = url.trim();
-
-  // Allow relative URLs (start with / or #)
-  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
-
-  // Parse and check protocol
-  try {
-    const parsed = new URL(trimmed);
-    if (!SAFE_URL_PROTOCOLS.has(parsed.protocol)) return "#";
-    return trimmed;
-  } catch {
-    // Not a valid absolute URL — could be a relative path or anchor
-    // Block anything that looks like a protocol
-    if (/^[a-z]+:/i.test(trimmed)) return "#";
-    return trimmed;
-  }
-}
-
-/**
- * Sanitize a URL specifically for iframe src — only allow https.
- */
-export function safeEmbedUrl(url: unknown): string {
-  if (typeof url !== "string" || !url.trim()) return "";
-
-  const trimmed = url.trim();
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== "https:") return "";
-    return trimmed;
-  } catch {
-    return "";
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Service
