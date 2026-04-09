@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { requireAuth } from "@/src/lib/auth";
 import { createEmailVerificationToken } from "@/src/lib/verification";
+import { sendVerificationEmail } from "@/src/lib/email";
 import { isRateLimited, getClientIp } from "@/src/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -37,11 +38,7 @@ export async function POST(req: NextRequest) {
 
   const code = await createEmailVerificationToken(userId);
 
-  // TODO: Send email
-  console.log(`[DEV] Resend verification code for ${user.email}: ${code}`);
+  await sendVerificationEmail(user.email, code);
 
-  return NextResponse.json({
-    message: "Verification code sent",
-    ...(process.env.NODE_ENV !== "production" && { verificationCode: code }),
-  });
+  return NextResponse.json({ message: "Verification code sent" });
 }

@@ -82,6 +82,7 @@ export async function POST(req: Request) {
       email: user.email,
       name: user.name,
       role: user.role,
+      emailVerified: user.emailVerified,
     },
     accessToken,
     refreshToken,
