@@ -32,6 +32,14 @@ export async function sendVerificationEmail(email: string, code: string) {
   );
 }
 
+export async function sendDeleteConfirmationEmail(email: string, code: string, projectName: string) {
+  await provider.sendEmail(
+    email,
+    "Confirm project deletion",
+    `<p>You requested to delete <strong>${projectName}</strong>.</p><p>Your confirmation code is: <strong>${code}</strong></p><p>This code expires in 10 minutes. If you didn't request this, ignore this email.</p>`
+  );
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${process.env.BASE_URL || "http://localhost:3000"}/reset-password?token=${token}`;
   await provider.sendEmail(
