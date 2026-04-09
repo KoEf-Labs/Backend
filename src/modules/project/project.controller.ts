@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
 import { MAX_CONTENT_SIZE } from "@/src/shared/constants";
 import { getUserId as getAuthUserId, requireAdmin, AuthError } from "@/src/lib/auth";
 import { DomainService } from "@/src/modules/domain";
+import { sendDeleteConfirmationEmail } from "@/src/lib/email";
 
 const service = new ProjectService();
 const domainService = new DomainService();
+
+// In-memory store for delete confirmation codes (swap with Redis in production)
+const deleteConfirmations = new Map<string, { code: string; userId: string; expiresAt: number }>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -194,10 +199,65 @@ export async function handlePatch(req: NextRequest, id: string) {
   }
 }
 
-export async function handleDelete(req: NextRequest, id: string) {
-  const userId = requireUserId(req);
-
+/**
+ * POST handler for requesting delete confirmation.
+ * Generates a 6-digit code, sends via email, stores in memory.
+ */
+export async function handleRequestDelete(req: NextRequest, id: string) {
   try {
+    const userId = requireUserId(req);
+    const project = await service.getByIdForUser(id, userId);
+
+    // Generate 6-digit code
+    const code = crypto.randomInt(100000, 999999).toString();
+    deleteConfirmations.set(id, {
+      code,
+      userId,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    });
+
+    // Get user email from project
+    const { prisma } = await import("@/src/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+
+    if (user) {
+      const name = (project.draftContent as any)?.navbar?.logo || "your project";
+      await sendDeleteConfirmationEmail(user.email, code, name);
+    }
+
+    return json({ message: "Confirmation code sent to your email" });
+  } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+/**
+ * DELETE handler — requires confirmation code from email.
+ */
+export async function handleDelete(req: NextRequest, id: string) {
+  try {
+    const userId = requireUserId(req);
+
+    // Check confirmation code
+    const body = await req.json().catch(() => ({}));
+    const confirmation = deleteConfirmations.get(id);
+
+    if (!confirmation || confirmation.userId !== userId) {
+      return error("Please request a deletion code first", 400);
+    }
+
+    if (Date.now() > confirmation.expiresAt) {
+      deleteConfirmations.delete(id);
+      return error("Confirmation code expired. Request a new one.", 400);
+    }
+
+    if (body.code !== confirmation.code) {
+      return error("Invalid confirmation code", 400);
+    }
+
+    deleteConfirmations.delete(id);
     await service.delete(id, userId);
     return json({ deleted: true });
   } catch (e) {
