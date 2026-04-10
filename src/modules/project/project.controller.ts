@@ -74,9 +74,8 @@ function toApiResponse(project: any) {
 // ---------------------------------------------------------------------------
 
 export async function handleGet(req: NextRequest, id?: string) {
-  const userId = requireUserId(req);
-
   try {
+    const userId = requireUserId(req);
     if (id) {
       const project = await service.getByIdForUser(id, userId);
       return json(toApiResponse(project));
@@ -99,9 +98,8 @@ export async function handleGet(req: NextRequest, id?: string) {
 }
 
 export async function handlePost(req: NextRequest) {
-  const userId = requireUserId(req);
-
   try {
+    const userId = requireUserId(req);
     const body = await req.json();
 
     const theme = validateThemeName(body.theme);
@@ -150,9 +148,8 @@ export async function handlePost(req: NextRequest) {
 }
 
 export async function handlePatch(req: NextRequest, id: string) {
-  const userId = requireUserId(req);
-
   try {
+    const userId = requireUserId(req);
     const body = await req.json();
 
     // Content size check
@@ -272,9 +269,8 @@ export async function handleDelete(req: NextRequest, id: string) {
 // ---------------------------------------------------------------------------
 
 export async function handlePublish(req: NextRequest, id: string) {
-  const userId = requireUserId(req);
-
   try {
+    const userId = requireUserId(req);
     const project = await service.submitForReview(id, userId);
     return json(toApiResponse(project));
   } catch (e) {
