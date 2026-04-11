@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  */
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (isRenderRateLimited(`upload:${ip}`)) {
+  if (await isRenderRateLimited(`upload:${ip}`)) {
     return NextResponse.json({ error: "Too many uploads. Please try again later." }, { status: 429 });
   }
 

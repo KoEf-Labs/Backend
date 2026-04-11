@@ -1,27 +1,33 @@
+import Redis from "ioredis";
+import { logger } from "./logger";
+
 /**
  * Redis client.
- *
- * Currently null — using in-memory alternatives for cache and rate limiting.
- * When ready for production:
- * 1. npm install ioredis
- * 2. Set REDIS_URL in .env
- * 3. Uncomment the client below
- * 4. Swap MemoryCache → RedisCache in theme.service.ts, schema.service.ts, render.service.ts
- * 5. Swap in-memory rate limiter → Redis-backed in rate-limit.ts
+ * Falls back gracefully if REDIS_URL is not set (dev mode).
  */
+let redis: Redis | null = null;
 
-// import Redis from "ioredis";
-//
-// export const redis = process.env.REDIS_URL
-//   ? new Redis(process.env.REDIS_URL)
-//   : null;
+if (process.env.REDIS_URL) {
+  redis = new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: 3,
+    retryStrategy(times) {
+      if (times > 5) return null; // stop retrying
+      return Math.min(times * 200, 2000);
+    },
+    lazyConnect: true,
+  });
 
-export const redis = null;
+  redis.on("connect", () => logger.info("Redis connected"));
+  redis.on("error", (err) => logger.error("Redis error", { error: err.message }));
 
-/**
- * Check if Redis is available.
- * Use this to gracefully fall back to in-memory when Redis isn't configured.
- */
+  redis.connect().catch(() => {
+    logger.warn("Redis connection failed — falling back to in-memory");
+    redis = null;
+  });
+}
+
+export { redis };
+
 export function isRedisAvailable(): boolean {
-  return redis !== null;
+  return redis !== null && redis.status === "ready";
 }

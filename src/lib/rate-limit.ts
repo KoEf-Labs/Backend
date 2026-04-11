@@ -1,47 +1,62 @@
 /**
- * Simple in-memory rate limiter for auth endpoints.
- * Key = IP address, tracks attempts within a sliding window.
+ * Rate limiter — Redis-backed with in-memory fallback.
  */
+import { redis, isRedisAvailable } from "./redis";
 
-interface RateLimitEntry {
-  attempts: number;
-  resetAt: number;
-}
+const WINDOW_SECONDS = 60; // 1 minute
 
-const store = new Map<string, RateLimitEntry>();
+// In-memory fallback store
+const memoryStore = new Map<string, { count: number; resetAt: number }>();
 
-const WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_ATTEMPTS = 5;
+/**
+ * Check rate limit. Returns true if blocked.
+ * Redis: uses INCR + EXPIRE (atomic sliding window)
+ * Memory: simple counter fallback
+ */
+async function checkLimit(key: string, max: number): Promise<boolean> {
+  if (isRedisAvailable() && redis) {
+    try {
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.expire(key, WINDOW_SECONDS);
+      }
+      return count > max;
+    } catch {
+      // Redis error — fall through to memory
+    }
+  }
 
-/** Returns true if the request should be blocked (auth: 5/min) */
-export function isRateLimited(key: string): boolean {
+  // In-memory fallback
   const now = Date.now();
-  const entry = store.get(key);
+  const entry = memoryStore.get(key);
 
   if (!entry || now > entry.resetAt) {
-    store.set(key, { attempts: 1, resetAt: now + WINDOW_MS });
+    memoryStore.set(key, { count: 1, resetAt: now + WINDOW_SECONDS * 1000 });
     return false;
   }
 
-  entry.attempts++;
-  if (entry.attempts > MAX_ATTEMPTS) {
-    return true;
-  }
+  entry.count++;
+  return entry.count > max;
+}
 
-  return false;
+/** Auth endpoints: 5/min per IP */
+export function isRateLimited(key: string): Promise<boolean> {
+  return checkLimit(`rl:auth:${key}`, 5);
+}
+
+/** Render/upload endpoints: 10/min per IP */
+export function isRenderRateLimited(key: string): Promise<boolean> {
+  return checkLimit(`rl:heavy:${key}`, 10);
 }
 
 /**
  * Get client IP from request.
  * Only trusts X-Forwarded-For when TRUST_PROXY=true (behind reverse proxy).
- * Otherwise uses a fallback key to prevent IP spoofing.
  */
 export function getClientIp(req: Request): string {
   const trustProxy = process.env.TRUST_PROXY === "true";
 
   if (trustProxy) {
-    // Behind a trusted proxy (e.g. Cloudflare, nginx)
-    // Prefer Cloudflare header, then X-Real-IP, then X-Forwarded-For
     const cfIp = req.headers.get("cf-connecting-ip");
     if (cfIp) return cfIp.trim();
 
@@ -52,40 +67,15 @@ export function getClientIp(req: Request): string {
     if (forwarded) return forwarded.split(",")[0].trim();
   }
 
-  // Not behind proxy or no proxy headers — use a combination
-  // that's harder to spoof (in production, the reverse proxy should set these)
   return req.headers.get("x-real-ip") || "unknown";
 }
 
-/**
- * Rate limiter for compute-heavy endpoints (render: 10/min).
- * Uses separate store to avoid interference with auth limiter.
- */
-const renderStore = new Map<string, RateLimitEntry>();
-const RENDER_MAX = 10;
-
-export function isRenderRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = renderStore.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    renderStore.set(key, { attempts: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-
-  entry.attempts++;
-  return entry.attempts > RENDER_MAX;
-}
-
-// Cleanup old entries every 5 minutes
+// Memory cleanup every 5 minutes
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, entry] of store) {
-      if (now > entry.resetAt) store.delete(key);
-    }
-    for (const [key, entry] of renderStore) {
-      if (now > entry.resetAt) renderStore.delete(key);
+    for (const [key, entry] of memoryStore) {
+      if (now > entry.resetAt) memoryStore.delete(key);
     }
   }, 5 * 60 * 1000);
 }
