@@ -227,7 +227,9 @@ export class ProjectService {
       where: { id },
       data: {
         status: ProjectStatus.REJECTED,
-        rejectReason: reason?.slice(0, 500) || null,
+        rejectReason: reason
+          ? reason.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim().slice(0, 500) || null
+          : null,
       },
     });
   }

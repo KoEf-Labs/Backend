@@ -96,8 +96,9 @@ export class RenderService {
           throw new RenderError(err.error || "Render worker error", 500);
         } catch (e) {
           if (e instanceof RenderError) throw e;
-          // stderr wasn't valid JSON — treat the raw text as the error
-          throw new RenderError(`Render worker error: ${stderr.slice(0, 200)}`, 500);
+          // stderr wasn't valid JSON — return generic message (don't leak internal paths)
+          console.error("[RenderService] Worker stderr:", stderr.slice(0, 500));
+          throw new RenderError("Render failed. Please try again.", 500);
         }
       }
 
@@ -164,7 +165,8 @@ export class RenderService {
           throw new RenderError(err.error || "Render worker error", 500);
         } catch (e) {
           if (e instanceof RenderError) throw e;
-          throw new RenderError(`Render worker error: ${stderr.slice(0, 200)}`, 500);
+          console.error("[RenderService] Preview stderr:", stderr.slice(0, 500));
+          throw new RenderError("Render failed. Please try again.", 500);
         }
       }
 
