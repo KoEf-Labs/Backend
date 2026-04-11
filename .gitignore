@@ -29,6 +29,10 @@ prisma/migrations/
 public/uploads/**
 !public/uploads/.gitkeep
 
+# Published static sites
+public/sites/**
+!public/sites/.gitkeep
+
 # Logs
 *.log
 npm-debug.log*
