@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 
-const USER_SELECT = { id: true, email: true, name: true, phone: true, role: true, emailVerified: true, createdAt: true };
+const USER_SELECT = { id: true, email: true, name: true, phone: true, avatar: true, role: true, emailVerified: true, createdAt: true };
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest) {
     const userId = requireAuth(req);
     const body = await req.json();
 
-    const updates: Record<string, string> = {};
+    const updates: Record<string, string | null> = {};
 
     if (typeof body.name === "string") {
       const name = body.name.trim().slice(0, 100);
@@ -46,6 +46,11 @@ export async function PATCH(req: NextRequest) {
 
     if (typeof body.phone === "string") {
       updates.phone = body.phone.trim().slice(0, 20);
+    }
+
+    if (typeof body.avatar === "string") {
+      // avatar can be: "avatar_1" to "avatar_10" (default), URL (uploaded photo), or null (remove)
+      updates.avatar = body.avatar.trim().slice(0, 500) || null;
     }
 
     if (Object.keys(updates).length === 0) {

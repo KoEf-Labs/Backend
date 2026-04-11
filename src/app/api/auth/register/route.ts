@@ -129,6 +129,7 @@ export async function POST(req: Request) {
       id: user.id,
       email: user.email,
       name: user.name,
+      avatar: null,
       role: user.role,
       emailVerified: false,
     },
