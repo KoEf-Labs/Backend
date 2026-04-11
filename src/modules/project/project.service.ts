@@ -2,6 +2,7 @@ import { prisma } from "@/src/lib/db";
 import { Prisma, ProjectStatus } from "@prisma/client";
 import { ContentValidator } from "../theme/content-validator";
 import { RenderService } from "../render/render.service";
+import { PublishService } from "../publish";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +29,7 @@ export interface UpdateProjectInput {
 
 const validator = new ContentValidator();
 const renderService = new RenderService();
+const publishService = new PublishService();
 
 export class ProjectService {
   async getById(id: string) {
@@ -218,13 +220,31 @@ export class ProjectService {
       );
     }
 
-    return prisma.project.update({
+    const updated = await prisma.project.update({
       where: { id },
       data: {
         publishedContent: project.draftContent,
         status: ProjectStatus.PUBLISHED,
       },
     });
+
+    // Generate static HTML and write to disk
+    try {
+      await publishService.publishToStatic({
+        id: updated.id,
+        theme: updated.theme,
+        subdomain: updated.subdomain,
+        customDomain: updated.customDomain,
+        publishedContent: updated.publishedContent,
+      });
+    } catch (e) {
+      // Don't fail the approve if static publish fails — site still works via runtime render
+      const msg = e instanceof Error ? e.message : String(e);
+      const { logger } = await import("@/src/lib/logger");
+      logger.error("Static publish failed", { projectId: id, error: msg });
+    }
+
+    return updated;
   }
 
   /**
@@ -260,7 +280,16 @@ export class ProjectService {
   }
 
   async delete(id: string, userId: string) {
-    await this.getByIdForUser(id, userId);
+    const project = await this.getByIdForUser(id, userId);
+
+    // Remove static files if published
+    if (project.subdomain || project.customDomain) {
+      await publishService.removeStatic({
+        subdomain: project.subdomain,
+        customDomain: project.customDomain,
+      }).catch(() => {});
+    }
+
     return prisma.project.update({
       where: { id },
       data: { deletedAt: new Date() },
