@@ -223,7 +223,7 @@ export class ProjectService {
     const updated = await prisma.project.update({
       where: { id },
       data: {
-        publishedContent: project.draftContent,
+        publishedContent: project.draftContent as Prisma.InputJsonValue,
         status: ProjectStatus.PUBLISHED,
       },
     });
