@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { Project } from "@prisma/client";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
 import { MAX_CONTENT_SIZE } from "@/src/shared/constants";
@@ -57,7 +58,7 @@ function sanitizeDomain(value: unknown): string | undefined {
  * Map project DB record to API response.
  * Mobil taraf "contentJson" bekliyor → draftContent'i contentJson olarak döndür.
  */
-function toApiResponse(project: any) {
+function toApiResponse(project: Partial<Project> & { draftContent: unknown }) {
   const { draftContent, publishedContent, ...rest } = project;
   return {
     ...rest,

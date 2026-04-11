@@ -74,7 +74,7 @@ export async function GET(_req: Request, { params }: Params) {
   <span class="hero-btn">Get Started →</span>
 </div>
 <div class="services">
-  ${services.map((s: any) => `<div class="svc"><div class="svc-dot"></div><div class="svc-title">${s.title || ''}</div><div class="svc-desc">${(s.description || '').substring(0, 40)}</div></div>`).join('')}
+  ${services.map((s: Record<string, string>) => `<div class="svc"><div class="svc-dot"></div><div class="svc-title">${s.title || ''}</div><div class="svc-desc">${(s.description || '').substring(0, 40)}</div></div>`).join('')}
 </div>
 </body></html>`;
 

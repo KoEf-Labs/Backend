@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { logger } from "@/src/lib/logger";
 
 const USER_SELECT = { id: true, email: true, name: true, phone: true, avatar: true, role: true, emailVerified: true, createdAt: true };
 
@@ -69,7 +70,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     const message = err instanceof Error ? err.message : "Update failed";
-    console.error("[PATCH /api/auth/me] Error:", message);
+    logger.error("PATCH /api/auth/me failed", { error: message });
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
