@@ -66,6 +66,21 @@ export class ProjectService {
         orderBy: { updatedAt: "desc" },
         skip,
         take: limit,
+        select: {
+          id: true,
+          userId: true,
+          theme: true,
+          draftContent: true,
+          status: true,
+          subdomain: true,
+          customDomain: true,
+          rejectReason: true,
+          domainVerificationStatus: true,
+          domainVerifiedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          // publishedContent excluded — large blob, not needed in list
+        },
       }),
       prisma.project.count({ where }),
     ]);

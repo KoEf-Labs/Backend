@@ -6,13 +6,13 @@ const publicKey = (process.env.JWT_PUBLIC_KEY ?? "").replace(/\\n/g, "\n");
 
 // Validate keys on startup
 if (!privateKey || !privateKey.includes("BEGIN")) {
-  console.error("⚠️  JWT_PRIVATE_KEY is missing or invalid. Auth will not work.");
+  console.error("JWT_PRIVATE_KEY is missing or invalid. Auth will not work.");
   if (process.env.NODE_ENV === "production") {
     throw new Error("JWT_PRIVATE_KEY must be set in production");
   }
 }
 if (!publicKey || !publicKey.includes("BEGIN")) {
-  console.error("⚠️  JWT_PUBLIC_KEY is missing or invalid. Auth will not work.");
+  console.error("JWT_PUBLIC_KEY is missing or invalid. Auth will not work.");
   if (process.env.NODE_ENV === "production") {
     throw new Error("JWT_PUBLIC_KEY must be set in production");
   }

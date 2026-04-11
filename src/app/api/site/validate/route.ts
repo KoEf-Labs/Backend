@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ContentValidator } from "@/src/modules/theme/content-validator";
+import { logger } from "@/src/lib/logger";
 
 const validator = new ContentValidator();
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (e: any) {
-    console.error("Validation error:", e);
+    logger.error("Validation error", { error: e?.message || String(e) });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
