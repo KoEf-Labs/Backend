@@ -31,6 +31,7 @@ model User {
   passwordHash   String
   name           String
   phone          String?
+  avatar         String?
   role           Role                @default(USER)
   emailVerified  Boolean             @default(false)
   createdAt      DateTime            @default(now())
