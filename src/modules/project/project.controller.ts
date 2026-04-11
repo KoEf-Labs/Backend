@@ -7,12 +7,10 @@ import { MAX_CONTENT_SIZE } from "@/src/shared/constants";
 import { getUserId as getAuthUserId, requireAdmin, AuthError } from "@/src/lib/auth";
 import { DomainService } from "@/src/modules/domain";
 import { sendDeleteConfirmationEmail } from "@/src/lib/email";
+import { setDeleteCode, getDeleteCode, clearDeleteCode } from "@/src/lib/delete-confirmation";
 
 const service = new ProjectService();
 const domainService = new DomainService();
-
-// In-memory store for delete confirmation codes (swap with Redis in production)
-const deleteConfirmations = new Map<string, { code: string; userId: string; expiresAt: number }>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -206,13 +204,9 @@ export async function handleRequestDelete(req: NextRequest, id: string) {
     const userId = requireUserId(req);
     const project = await service.getByIdForUser(id, userId);
 
-    // Generate 6-digit code
+    // Generate 6-digit code and store (Redis or in-memory)
     const code = crypto.randomInt(100000, 999999).toString();
-    deleteConfirmations.set(id, {
-      code,
-      userId,
-      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
-    });
+    await setDeleteCode(id, userId, code);
 
     // Get user email from project
     const { prisma } = await import("@/src/lib/db");
@@ -240,22 +234,17 @@ export async function handleDelete(req: NextRequest, id: string) {
 
     // Check confirmation code
     const body = await req.json().catch(() => ({}));
-    const confirmation = deleteConfirmations.get(id);
+    const confirmation = await getDeleteCode(id);
 
     if (!confirmation || confirmation.userId !== userId) {
       return error("Please request a deletion code first", 400);
-    }
-
-    if (Date.now() > confirmation.expiresAt) {
-      deleteConfirmations.delete(id);
-      return error("Confirmation code expired. Request a new one.", 400);
     }
 
     if (body.code !== confirmation.code) {
       return error("Invalid confirmation code", 400);
     }
 
-    deleteConfirmations.delete(id);
+    await clearDeleteCode(id);
     await service.delete(id, userId);
     return json({ deleted: true });
   } catch (e) {

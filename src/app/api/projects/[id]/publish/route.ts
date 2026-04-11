@@ -8,7 +8,7 @@ interface Params {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const ip = getClientIp(req);
-  if (isRateLimited(`publish:${ip}`)) {
+  if (await isRateLimited(`publish:${ip}`)) {
     return NextResponse.json({ error: "Too many publish requests. Please try again later." }, { status: 429 });
   }
 

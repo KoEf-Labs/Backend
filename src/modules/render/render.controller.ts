@@ -25,7 +25,7 @@ function error(message: string, status: number) {
 
 export async function handleRender(req: NextRequest) {
   const ip = getClientIp(req);
-  if (isRenderRateLimited(`render:${ip}`)) {
+  if (await isRenderRateLimited(`render:${ip}`)) {
     return error("Too many render requests. Please try again later.", 429);
   }
 

@@ -14,7 +14,7 @@ import { logger } from "@/src/lib/logger";
 export async function POST(req: Request) {
   // Rate limit
   const ip = getClientIp(req);
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(ip)) {
     return NextResponse.json(
       { error: "Too many requests. Try again later." },
       { status: 429 }
