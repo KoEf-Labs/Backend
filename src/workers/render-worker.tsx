@@ -30,11 +30,12 @@ if (!themeName) {
   process.exit(1);
 }
 
-const Component = loadTheme(themeName);
-if (!Component) {
+const _loaded = loadTheme(themeName);
+if (!_loaded) {
   console.error(JSON.stringify({ error: `Theme "${themeName}" not found` }));
   process.exit(1);
 }
+const Component: React.ComponentType<{ data: any }> = _loaded;
 
 async function main() {
   let content: Record<string, unknown>;
