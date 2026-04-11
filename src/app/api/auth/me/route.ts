@@ -68,6 +68,8 @@ export async function PATCH(req: NextRequest) {
     if (err.name === "AuthError") {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
+    const message = err instanceof Error ? err.message : "Update failed";
+    console.error("[PATCH /api/auth/me] Error:", message);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
