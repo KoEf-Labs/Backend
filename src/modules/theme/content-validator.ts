@@ -249,14 +249,28 @@ export class ContentValidator {
   }
 
   private checkXSS(path: string, value: string, errors: ContentValidationError[]): void {
-    // Decode HTML entities before checking (prevent encoding bypass)
-    const decoded = value
-      .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-      .replace(/&#(\d+);?/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
-      .replace(/&(lt|gt|amp|quot|apos);/gi, (m) => {
-        const map: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&apos;": "'" };
-        return map[m.toLowerCase()] || m;
-      });
+    // Multi-pass decode to catch nested encoding (&amp;lt; → &lt; → <)
+    let decoded = value;
+    for (let i = 0; i < 3; i++) {
+      const prev = decoded;
+      decoded = decoded
+        .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#(\d+);?/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+        .replace(/&(lt|gt|amp|quot|apos|#x0*3c|#x0*3e);?/gi, (m) => {
+          const map: Record<string, string> = {
+            "&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&apos;": "'",
+          };
+          return map[m.toLowerCase()] || m;
+        });
+      if (decoded === prev) break;
+    }
+
+    // If the sanitized version differs from the raw value, something was stripped → XSS.
+    const stripped = sanitizeHtml(value, SANITIZE_OPTIONS);
+    if (stripped !== value && stripped !== value.replace(/&amp;/g, "&")) {
+      errors.push({ path, message: "Potentially dangerous content detected", type: "xss" });
+      return;
+    }
 
     for (const pattern of XSS_PATTERNS) {
       if (pattern.test(value) || pattern.test(decoded)) {

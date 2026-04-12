@@ -233,6 +233,29 @@ export class ProjectService {
       );
     }
 
+    // Generate static HTML FIRST — if disk write fails we don't want a half-published row
+    try {
+      await publishService.publishToStatic({
+        id: project.id,
+        theme: project.theme,
+        subdomain: project.subdomain,
+        customDomain: project.customDomain,
+        publishedContent: project.draftContent,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const { logger } = await import("@/src/lib/logger");
+      logger.error("Static publish failed — aborting approve", {
+        projectId: id,
+        error: msg,
+      });
+      throw new ServiceError(
+        "Static publish failed — please retry. Project status unchanged.",
+        500
+      );
+    }
+
+    // Static write succeeded; now flip DB state
     const updated = await prisma.project.update({
       where: { id },
       data: {
@@ -245,22 +268,6 @@ export class ProjectService {
         },
       },
     });
-
-    // Generate static HTML and write to disk
-    try {
-      await publishService.publishToStatic({
-        id: updated.id,
-        theme: updated.theme,
-        subdomain: updated.subdomain,
-        customDomain: updated.customDomain,
-        publishedContent: updated.publishedContent,
-      });
-    } catch (e) {
-      // Don't fail the approve if static publish fails — site still works via runtime render
-      const msg = e instanceof Error ? e.message : String(e);
-      const { logger } = await import("@/src/lib/logger");
-      logger.error("Static publish failed", { projectId: id, error: msg });
-    }
 
     return updated;
   }

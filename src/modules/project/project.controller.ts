@@ -8,6 +8,7 @@ import { getUserId as getAuthUserId, requireServiceToken, AuthError } from "@/sr
 import { DomainService } from "@/src/modules/domain";
 import { sendDeleteConfirmationEmail } from "@/src/lib/email";
 import { setDeleteCode, getDeleteCode, clearDeleteCode } from "@/src/lib/delete-confirmation";
+import { logger } from "@/src/lib/logger";
 
 const service = new ProjectService();
 const domainService = new DomainService();
@@ -323,6 +324,14 @@ export async function handleInternalApprove(req: NextRequest, id: string) {
 
   try {
     const project = await service.approve(id);
+    logger.info("admin_action", {
+      type: "admin_action",
+      action: "approve",
+      projectId: id,
+      subdomain: project.subdomain ?? null,
+      customDomain: project.customDomain ?? null,
+      userId: project.userId,
+    });
     return json(toApiResponse(project));
   } catch (e) {
     if (e instanceof AuthError) return error(e.message, e.status);
@@ -341,6 +350,15 @@ export async function handleInternalReject(req: NextRequest, id: string) {
   try {
     const body = await req.json().catch(() => ({}));
     const project = await service.reject(id, body.reason);
+    logger.info("admin_action", {
+      type: "admin_action",
+      action: "reject",
+      projectId: id,
+      subdomain: project.subdomain ?? null,
+      customDomain: project.customDomain ?? null,
+      userId: project.userId,
+      hasReason: !!body.reason,
+    });
     return json(toApiResponse(project));
   } catch (e) {
     if (e instanceof AuthError) return error(e.message, e.status);
