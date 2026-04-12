@@ -237,6 +237,11 @@ export class ProjectService {
         publishedContent: project.draftContent as Prisma.InputJsonValue,
         status: ProjectStatus.PUBLISHED,
       },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true },
+        },
+      },
     });
 
     // Generate static HTML and write to disk
@@ -277,6 +282,11 @@ export class ProjectService {
           ? reason.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim().slice(0, 500) || null
           : null,
       },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true },
+        },
+      },
     });
   }
 
@@ -287,7 +297,28 @@ export class ProjectService {
     return prisma.project.findMany({
       where: { status: ProjectStatus.PENDING, deletedAt: null },
       orderBy: { updatedAt: "desc" },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true },
+        },
+      },
     });
+  }
+
+  /**
+   * Admin: fetch a single project by id (no user ownership check).
+   */
+  async adminGetById(id: string) {
+    const project = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+    if (!project) throw new ServiceError("Project not found", 404);
+    return project;
   }
 
   async delete(id: string, userId: string) {
