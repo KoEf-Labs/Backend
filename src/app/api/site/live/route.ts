@@ -4,6 +4,7 @@ import { RenderService, RenderError } from "@/src/modules/render/render.service"
 import { ProjectStatus } from "@prisma/client";
 import { trackView } from "@/src/lib/site-views";
 import { getClientIp } from "@/src/lib/rate-limit";
+import { getMaintenanceState, maintenanceHtml } from "@/src/lib/maintenance";
 
 const domainService = new DomainService();
 const renderService = new RenderService();
@@ -24,6 +25,19 @@ function error(message: string, status: number) {
  * In dev, use ?host= query param to simulate domain resolution.
  */
 export async function GET(req: NextRequest) {
+  // Maintenance mode — render a friendly page instead of a real site
+  const maintenance = await getMaintenanceState();
+  if (maintenance.enabled) {
+    return new NextResponse(maintenanceHtml(maintenance.message), {
+      status: 503,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Retry-After": "60",
+      },
+    });
+  }
+
   // Use ?host= param for dev, or real Host header in production
   const host =
     req.nextUrl.searchParams.get("host") ||

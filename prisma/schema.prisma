@@ -136,3 +136,36 @@ model SiteView {
   @@unique([projectId, date])
   @@index([date])
 }
+
+/// Generic settings store. Keyed by name, JSON value. Used for rate limits,
+/// feature flags, anything that needs to be editable from the admin panel
+/// without a deploy. Maintenance mode lives in Redis separately so the
+/// middleware can read it without hitting the DB.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Subdomain blacklist. A match causes /api/domain/check and project update
+/// to reject the subdomain with a "blocked" error.
+model DomainBlacklist {
+  id        String   @id @default(uuid())
+  pattern   String   @unique // exact lowercase subdomain OR regex prefixed with "re:"
+  reason    String?
+  addedBy   String // admin email for attribution
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Enables/disables a theme from the admin panel. Missing row = enabled.
+/// Disabled themes are hidden from /api/site/themes and rejected at
+/// project create/update.
+model ThemeConfig {
+  name      String   @id // matches themes/{name} directory
+  enabled   Boolean  @default(true)
+  disabledBy String?
+  disabledReason String?
+  updatedAt DateTime @updatedAt
+}

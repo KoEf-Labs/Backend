@@ -58,6 +58,29 @@ export class DomainService {
     return { valid: true };
   }
 
+  /**
+   * Async variant that additionally consults the admin DomainBlacklist.
+   * Call this from the request path (e.g. /api/domain/check and project
+   * create/update); keep validateSubdomain() for pure format checks.
+   */
+  async validateSubdomainWithBlacklist(
+    subdomain: string
+  ): Promise<{ valid: boolean; error?: string }> {
+    const base = this.validateSubdomain(subdomain);
+    if (!base.valid) return base;
+
+    // Lazy import so moderation.service isn't pulled into code paths that
+    // don't need it (themes, public rendering, etc.)
+    const { ModerationService } = await import(
+      "@/src/modules/admin/moderation.service"
+    );
+    const moderation = new ModerationService();
+    const blocked = await moderation.isSubdomainBlocked(subdomain);
+    if (blocked) return { valid: false, error: blocked };
+
+    return { valid: true };
+  }
+
   async isSubdomainAvailable(subdomain: string): Promise<boolean> {
     const existing = await prisma.project.findUnique({
       where: { subdomain: subdomain.trim().toLowerCase() },

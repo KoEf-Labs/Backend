@@ -15,7 +15,17 @@ function error(message: string, status: number) {
 export async function handleListThemes() {
   try {
     const themes = service.getThemes();
-    return json({ themes });
+    // Filter out admin-disabled themes so mobile users don't see them
+    const { prisma } = await import("@/src/lib/db");
+    const disabled = await prisma.themeConfig.findMany({
+      where: { enabled: false },
+      select: { name: true },
+    });
+    const disabledSet = new Set(disabled.map((t) => t.name));
+    const filtered = (themes as Array<{ name: string }>).filter(
+      (t) => !disabledSet.has(t.name)
+    );
+    return json({ themes: filtered });
   } catch (e) {
     if (e instanceof ThemeError) return error(e.message, e.status);
     return error("Internal server error", 500);

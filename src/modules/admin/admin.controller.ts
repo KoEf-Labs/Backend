@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "./admin.service";
+import { ModerationService } from "./moderation.service";
 import { requireServiceToken, AuthError } from "@/src/lib/auth";
 import { ProjectStatus } from "@prisma/client";
 import { logger } from "@/src/lib/logger";
 
 const service = new AdminService();
+const moderationService = new ModerationService();
 
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status });
@@ -182,6 +184,152 @@ export async function handleTraffic(req: NextRequest) {
   const days = Number(req.nextUrl.searchParams.get("days")) || 30;
   const data = await service.traffic({ limit, days });
   return json(data);
+}
+
+// ── Settings / maintenance / moderation ─────────────────────────────
+
+export async function handleGetSettings(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+
+  const [rateLimits, maintenance] = await Promise.all([
+    moderationService.getRateLimits(),
+    moderationService.getMaintenance(),
+  ]);
+  return json({ rateLimits, maintenance });
+}
+
+export async function handleUpdateRateLimits(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+
+  const admin = adminFromHeaders(req);
+  const body = await req.json().catch(() => ({}));
+  try {
+    const next = await moderationService.updateRateLimits(body ?? {}, admin);
+    return json(next);
+  } catch (e) {
+    return error(e instanceof Error ? e.message : "Failed", 400);
+  }
+}
+
+export async function handleSetMaintenance(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+
+  const admin = adminFromHeaders(req);
+  const body = await req.json().catch(() => ({}));
+  const enabled = body?.enabled === true;
+  const message = typeof body?.message === "string" ? body.message : null;
+  try {
+    await moderationService.setMaintenance(enabled, message, admin);
+    return json({ ok: true, enabled, message });
+  } catch (e) {
+    return error(e instanceof Error ? e.message : "Failed", 500);
+  }
+}
+
+// Domain blacklist
+
+export async function handleListBlacklist(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const entries = await moderationService.listBlacklist();
+  return json({ entries });
+}
+
+export async function handleAddBlacklist(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const admin = adminFromHeaders(req);
+  const body = await req.json().catch(() => ({}));
+  try {
+    const entry = await moderationService.addBlacklistEntry(
+      body?.pattern ?? "",
+      body?.reason ?? null,
+      admin
+    );
+    return json(entry, 201);
+  } catch (e) {
+    return error(e instanceof Error ? e.message : "Failed", 400);
+  }
+}
+
+export async function handleDeleteBlacklist(req: NextRequest, id: string) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const admin = adminFromHeaders(req);
+  try {
+    await moderationService.removeBlacklistEntry(id, admin);
+    return json({ ok: true });
+  } catch (e) {
+    return error(e instanceof Error ? e.message : "Failed", 400);
+  }
+}
+
+// Themes
+
+export async function handleListThemesAdmin(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const themes = await moderationService.listThemes();
+  return json({ themes });
+}
+
+export async function handleToggleTheme(req: NextRequest, name: string) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const admin = adminFromHeaders(req);
+  const body = await req.json().catch(() => ({}));
+  try {
+    const entry = await moderationService.setThemeEnabled(
+      name,
+      body?.enabled === true,
+      typeof body?.reason === "string" ? body.reason : null,
+      admin
+    );
+    return json(entry);
+  } catch (e) {
+    return error(e instanceof Error ? e.message : "Failed", 400);
+  }
+}
+
+// Logs viewer
+
+export async function handleReadLogs(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+
+  const source = req.nextUrl.searchParams.get("source") as
+    | "api"
+    | "admin"
+    | "cleanup"
+    | "aggregate"
+    | null;
+  const lines = Number(req.nextUrl.searchParams.get("lines")) || 200;
+
+  if (!source || !["api", "admin", "cleanup", "aggregate"].includes(source)) {
+    return error("source must be api | admin | cleanup | aggregate", 400);
+  }
+
+  const admin = adminFromHeaders(req);
+  const content = await moderationService.readLogs(source, lines);
+
+  // Audit every log view for accountability
+  const { writeAudit } = await import("@/src/lib/audit");
+  await writeAudit({
+    adminId: admin.id,
+    adminEmail: admin.email,
+    action: "view_logs",
+    targetType: "system",
+    targetId: source,
+    metadata: { lines },
+  });
+
+  return new NextResponse(content, {
+    status: 200,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }
 
 // ── Audit log ────────────────────────────────────────────────────────
