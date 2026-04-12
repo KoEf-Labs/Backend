@@ -56,8 +56,13 @@ function sanitizeDomain(value: unknown): string | undefined {
  * Map project DB record to API response.
  * Mobil taraf "contentJson" bekliyor → draftContent'i contentJson olarak döndür.
  */
-function toApiResponse(project: Partial<Project> & { draftContent: unknown }) {
-  const { draftContent, publishedContent, ...rest } = project;
+function toApiResponse(
+  project: Partial<Project> & {
+    draftContent: unknown;
+    user?: { id: string; email: string; name: string } | null;
+  }
+) {
+  const { draftContent, publishedContent, user, ...rest } = project;
   return {
     ...rest,
     contentJson: draftContent,
@@ -65,6 +70,7 @@ function toApiResponse(project: Partial<Project> & { draftContent: unknown }) {
     rejectReason: project.rejectReason ?? null,
     domainVerificationStatus: project.domainVerificationStatus ?? null,
     domainVerifiedAt: project.domainVerifiedAt ?? null,
+    ...(user !== undefined && { user: user ?? null }),
   };
 }
 
@@ -284,6 +290,23 @@ export async function handleInternalListPending(req: NextRequest) {
   try {
     const projects = await service.listPending();
     return json(projects.map(toApiResponse));
+  } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleInternalGet(req: NextRequest, id: string) {
+  try {
+    requireServiceToken(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  try {
+    const project = await service.adminGetById(id);
+    return json(toApiResponse(project));
   } catch (e) {
     if (e instanceof AuthError) return error(e.message, e.status);
     if (e instanceof ServiceError) return error(e.message, e.status);
