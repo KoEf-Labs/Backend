@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { handleAdminReject } from "@/src/modules/project/project.controller";
+import { handleInternalApprove } from "@/src/modules/project/project.controller";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -7,5 +7,5 @@ interface Params {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  return handleAdminReject(req, id);
+  return handleInternalApprove(req, id);
 }

@@ -4,7 +4,7 @@ import { Project } from "@prisma/client";
 import { ProjectService, ServiceError } from "./project.service";
 import { validateThemeName } from "@/src/shared/utils";
 import { MAX_CONTENT_SIZE } from "@/src/shared/constants";
-import { getUserId as getAuthUserId, requireAdmin, AuthError } from "@/src/lib/auth";
+import { getUserId as getAuthUserId, requireServiceToken, AuthError } from "@/src/lib/auth";
 import { DomainService } from "@/src/modules/domain";
 import { sendDeleteConfirmationEmail } from "@/src/lib/email";
 import { setDeleteCode, getDeleteCode, clearDeleteCode } from "@/src/lib/delete-confirmation";
@@ -271,12 +271,12 @@ export async function handlePublish(req: NextRequest, id: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Admin — approve / reject / list pending
+// Internal — service-to-service (called by AdminBackend)
 // ---------------------------------------------------------------------------
 
-export async function handleAdminList(req: NextRequest) {
+export async function handleInternalListPending(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireServiceToken(req);
   } catch (e: any) {
     return error(e.message, e.status ?? 403);
   }
@@ -291,9 +291,9 @@ export async function handleAdminList(req: NextRequest) {
   }
 }
 
-export async function handleAdminApprove(req: NextRequest, id: string) {
+export async function handleInternalApprove(req: NextRequest, id: string) {
   try {
-    requireAdmin(req);
+    requireServiceToken(req);
   } catch (e: any) {
     return error(e.message, e.status ?? 403);
   }
@@ -308,9 +308,9 @@ export async function handleAdminApprove(req: NextRequest, id: string) {
   }
 }
 
-export async function handleAdminReject(req: NextRequest, id: string) {
+export async function handleInternalReject(req: NextRequest, id: string) {
   try {
-    requireAdmin(req);
+    requireServiceToken(req);
   } catch (e: any) {
     return error(e.message, e.status ?? 403);
   }
