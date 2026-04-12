@@ -26,19 +26,27 @@ enum DomainVerificationStatus {
 }
 
 model User {
-  id             String              @id @default(uuid())
-  email          String              @unique
-  passwordHash   String
-  name           String
-  phone          String?
-  avatar         String?
-  role           Role                @default(USER)
-  emailVerified  Boolean             @default(false)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  projects       Project[]
-  refreshTokens  RefreshToken[]
-  verifyTokens   VerificationToken[]
+  id              String              @id @default(uuid())
+  email           String              @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  avatar          String?
+  role            Role                @default(USER)
+  emailVerified   Boolean             @default(false)
+  suspended       Boolean             @default(false)
+  suspendedAt     DateTime?
+  suspendReason   String?
+  lastActivityAt  DateTime?
+  mustChangePwd   Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  projects        Project[]
+  refreshTokens   RefreshToken[]
+  verifyTokens    VerificationToken[]
+
+  @@index([suspended])
+  @@index([createdAt])
 }
 
 enum VerificationTokenType {
@@ -87,7 +95,44 @@ model Project {
   deletedAt                  DateTime?
   createdAt                  DateTime                   @default(now())
   updatedAt                  DateTime                   @updatedAt
+  siteViews                  SiteView[]
 
   @@index([userId])
   @@index([userId, deletedAt])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Audit trail for admin actions. Written by Backend internal endpoints
+/// AND by AdminBackend via POST /api/internal/audit-log. Read by AdminBackend
+/// for the history page.
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String // opaque — AdminBackend AdminUser.id
+  adminEmail String // denormalized for display so AdminBackend doesn't have to join
+  action     String // approve | reject | suspend | unsuspend | delete | unpublish | ...
+  targetType String // project | user | admin
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+/// Daily traffic counter per project. Populated by a background cron that
+/// consumes Redis counters written by /api/site/live and preview endpoints.
+model SiteView {
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date       DateTime // truncated to midnight UTC
+  count      Int      @default(0)
+  uniqueIps  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([projectId, date])
+  @@index([date])
 }

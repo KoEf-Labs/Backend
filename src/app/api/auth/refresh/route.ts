@@ -57,6 +57,15 @@ export async function POST(req: Request) {
     );
   }
 
+  // Suspended users can't refresh either — kill all their sessions
+  if (storedToken.user.suspended) {
+    await prisma.refreshToken.deleteMany({ where: { userId: storedToken.userId } });
+    return NextResponse.json(
+      { error: "Your account has been suspended.", suspended: true },
+      { status: 403 }
+    );
+  }
+
   // Token rotation in a transaction to prevent race conditions.
   // Delete old → check family → create new happens atomically.
   const familyId = storedToken.familyId;
