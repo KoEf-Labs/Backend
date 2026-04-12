@@ -13,11 +13,46 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { listPendingViewKeys, drainViewCounter } from "@/src/lib/site-views";
+import { redis } from "@/src/lib/redis";
 
 const prisma = new PrismaClient();
 
+/**
+ * Wait for Redis to reach "ready" state so listPendingViewKeys doesn't
+ * silently return [] during the lazyConnect handshake. Caps at 5s so a
+ * genuinely-down Redis still lets the cron exit cleanly.
+ */
+async function waitForRedis(timeoutMs = 5000): Promise<boolean> {
+  if (!redis) return false;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const pong = await redis.ping();
+      if (pong === "PONG") return true;
+    } catch {
+      // not ready yet — retry
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return false;
+}
+
 async function main() {
   const started = Date.now();
+
+  const redisReady = await waitForRedis();
+  if (!redisReady) {
+    console.log(
+      JSON.stringify({
+        level: "warn",
+        message: "aggregate-site-views",
+        timestamp: new Date().toISOString(),
+        error: "redis_unavailable",
+      })
+    );
+    return;
+  }
+
   const pending = await listPendingViewKeys();
 
   if (pending.length === 0) {
