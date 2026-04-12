@@ -12,6 +12,7 @@ const ALLOWED_ORIGINS = new Set(
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = [
+  "/api/health",
   "/api/auth/register",
   "/api/auth/login",
   "/api/auth/refresh",

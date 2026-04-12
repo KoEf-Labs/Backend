@@ -44,16 +44,16 @@ export function requireAuth(req: NextRequest): string {
   return userId;
 }
 
-/** Require ADMIN role */
-export function requireAdmin(req: NextRequest): string {
-  const payload = getAuthPayload(req);
-  if (!payload) {
-    throw new AuthError("Authentication required", 401);
+/** Require valid internal service token (for AdminBackend → Backend calls) */
+export function requireServiceToken(req: NextRequest): void {
+  const expected = process.env.INTERNAL_SERVICE_TOKEN;
+  if (!expected) {
+    throw new AuthError("Internal service token not configured", 500);
   }
-  if (payload.role !== "ADMIN") {
-    throw new AuthError("Admin access required", 403);
+  const provided = req.headers.get("x-service-token");
+  if (!provided || provided !== expected) {
+    throw new AuthError("Invalid service token", 403);
   }
-  return payload.sub;
 }
 
 export class AuthError extends Error {

@@ -44,6 +44,17 @@ const WORKER_PATH = path.join(
 // Use local tsx binary directly instead of npx (avoids ~200ms npx overhead per spawn)
 const TSX_BIN = path.join(process.cwd(), "node_modules", ".bin", "tsx");
 
+const RENDER_TIMEOUT_MS = Number(process.env.RENDER_TIMEOUT_MS) || 20000;
+const RENDER_MAX_BUFFER = Number(process.env.RENDER_MAX_BUFFER) || 10 * 1024 * 1024;
+const RENDER_MAX_CONTENT_BYTES =
+  Number(process.env.RENDER_MAX_CONTENT_BYTES) || 2 * 1024 * 1024;
+
+function isTimeoutError(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const err = e as { code?: string; killed?: boolean; signal?: string };
+  return err.code === "ETIMEDOUT" || (err.killed === true && err.signal === "SIGTERM");
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -69,6 +80,15 @@ export class RenderService {
 
     this.assertThemeExists(theme);
 
+    const serialized = JSON.stringify(content);
+    const contentBytes = Buffer.byteLength(serialized, "utf-8");
+    if (contentBytes > RENDER_MAX_CONTENT_BYTES) {
+      throw new RenderError(
+        `Content too large (${contentBytes} bytes, max ${RENDER_MAX_CONTENT_BYTES})`,
+        413
+      );
+    }
+
     // Check cache
     const key = this.cacheKey(theme, content);
     const cached = renderCache.get(key);
@@ -80,13 +100,14 @@ export class RenderService {
         [WORKER_PATH, theme, "stdin"],
         {
           cwd: process.cwd(),
-          maxBuffer: 10 * 1024 * 1024, // 10MB
-          timeout: 15000,
+          maxBuffer: RENDER_MAX_BUFFER,
+          timeout: RENDER_TIMEOUT_MS,
+          killSignal: "SIGTERM",
         }
       );
 
       // Write content JSON to stdin
-      child.child.stdin?.write(JSON.stringify(content));
+      child.child.stdin?.write(serialized);
       child.child.stdin?.end();
 
       const { stdout, stderr } = await child;
@@ -121,6 +142,14 @@ export class RenderService {
       return result;
     } catch (e: unknown) {
       if (e instanceof RenderError) throw e;
+      if (isTimeoutError(e)) {
+        logger.error("Render worker timed out", {
+          theme,
+          timeoutMs: RENDER_TIMEOUT_MS,
+          contentBytes,
+        });
+        throw new RenderError("Render timed out. Content may be too complex.", 504);
+      }
       const message = e instanceof Error ? e.message : String(e);
       throw new RenderError(`Render failed for "${theme}": ${message}`, 500);
     }
@@ -155,8 +184,9 @@ export class RenderService {
         [WORKER_PATH, theme, "preview"],
         {
           cwd: process.cwd(),
-          maxBuffer: 10 * 1024 * 1024,
-          timeout: 15000,
+          maxBuffer: RENDER_MAX_BUFFER,
+          timeout: RENDER_TIMEOUT_MS,
+          killSignal: "SIGTERM",
         }
       );
 
@@ -186,6 +216,10 @@ export class RenderService {
       };
     } catch (e: unknown) {
       if (e instanceof RenderError) throw e;
+      if (isTimeoutError(e)) {
+        logger.error("Render preview timed out", { theme, timeoutMs: RENDER_TIMEOUT_MS });
+        throw new RenderError("Preview render timed out.", 504);
+      }
       const message = e instanceof Error ? e.message : String(e);
       throw new RenderError(`Preview failed for "${theme}": ${message}`, 500);
     }

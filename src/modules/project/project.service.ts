@@ -195,6 +195,17 @@ export class ProjectService {
       throw new ServiceError("Project is already pending review", 400);
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { emailVerified: true },
+    });
+    if (!user?.emailVerified) {
+      throw new ServiceError(
+        "Please verify your email before submitting a project for review",
+        403
+      );
+    }
+
     return prisma.project.update({
       where: { id },
       data: { status: ProjectStatus.PENDING },
