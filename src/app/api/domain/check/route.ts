@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const customDomain = req.nextUrl.searchParams.get("customDomain");
 
   if (subdomain) {
-    const validation = domainService.validateSubdomain(subdomain);
+    const validation = await domainService.validateSubdomainWithBlacklist(subdomain);
     if (!validation.valid) {
       return NextResponse.json({ available: false, valid: false, error: validation.error });
     }
