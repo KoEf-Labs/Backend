@@ -55,6 +55,24 @@ export async function POST(req: Request) {
     );
   }
 
+  // Suspended users can't log in at all
+  if (user.suspended) {
+    logger.auth("login_failed", { email, userId: user.id, reason: "suspended", ip });
+    return NextResponse.json(
+      {
+        error: "Your account has been suspended.",
+        suspended: true,
+        reason: user.suspendReason ?? null,
+      },
+      { status: 403 }
+    );
+  }
+
+  // Track last activity
+  await prisma.user
+    .update({ where: { id: user.id }, data: { lastActivityAt: new Date() } })
+    .catch(() => {});
+
   // Generate tokens
   const accessToken = signAccessToken({
     sub: user.id,
