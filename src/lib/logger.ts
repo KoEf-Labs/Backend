@@ -3,6 +3,7 @@
  * Outputs one JSON line per event — easy to parse with log aggregators
  * (Datadog, CloudWatch, Loki, etc.)
  */
+import { captureException, captureMessage } from "./sentry";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -25,6 +26,12 @@ function log(level: LogLevel, message: string, meta?: Record<string, unknown>) {
 
   if (level === "error") {
     console.error(line);
+    const err = meta?.error;
+    if (err instanceof Error) {
+      captureException(err, meta);
+    } else {
+      captureMessage(message, "error");
+    }
   } else if (level === "warn") {
     console.warn(line);
   } else {
