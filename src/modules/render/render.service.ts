@@ -10,8 +10,9 @@ import { logger } from "@/src/lib/logger";
 const execFileAsync = promisify(execFile);
 
 // HTML render cache — key: hash(theme + content), value: rendered HTML
-// 10 minute TTL for published content
-const renderCache = new MemoryCache<RenderOutput>(600);
+// 10 minute TTL, LRU eviction at 100 entries (~50MB worst case at 500KB/entry)
+const RENDER_CACHE_MAX = Number(process.env.RENDER_CACHE_MAX) || 100;
+const renderCache = new MemoryCache<RenderOutput>(600, RENDER_CACHE_MAX);
 
 // ---------------------------------------------------------------------------
 // Types
