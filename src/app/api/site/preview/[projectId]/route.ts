@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "@/src/modules/project/project.service";
 import { RenderService, RenderError } from "@/src/modules/render/render.service";
-import { getUserId } from "@/src/lib/auth";
+import { getUserId, timingSafeEqualStr } from "@/src/lib/auth";
 
 const projectService = new ProjectService();
 const renderService = new RenderService();
@@ -17,7 +17,9 @@ function error(message: string, status: number) {
 function hasValidServiceToken(req: NextRequest): boolean {
   const expected = process.env.INTERNAL_SERVICE_TOKEN;
   if (!expected) return false;
-  return req.headers.get("x-service-token") === expected;
+  const provided = req.headers.get("x-service-token");
+  if (!provided) return false;
+  return timingSafeEqualStr(provided, expected);
 }
 
 /**

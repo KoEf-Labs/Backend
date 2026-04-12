@@ -216,7 +216,9 @@ export class ProjectService {
    * Admin: approve project. draftContent → publishedContent, status → PUBLISHED
    */
   async approve(id: string) {
-    const project = await prisma.project.findUnique({ where: { id } });
+    const project = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+    });
     if (!project) throw new ServiceError("Project not found", 404);
 
     if (project.status !== ProjectStatus.PENDING) {
@@ -267,7 +269,9 @@ export class ProjectService {
    * Admin: reject project. status → REJECTED
    */
   async reject(id: string, reason?: string) {
-    const project = await prisma.project.findUnique({ where: { id } });
+    const project = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+    });
     if (!project) throw new ServiceError("Project not found", 404);
 
     if (project.status !== ProjectStatus.PENDING) {
