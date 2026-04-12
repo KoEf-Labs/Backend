@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import crypto from "crypto";
 import { verifyAccessToken, AccessTokenPayload } from "./jwt";
 
 /**
@@ -51,9 +52,17 @@ export function requireServiceToken(req: NextRequest): void {
     throw new AuthError("Internal service token not configured", 500);
   }
   const provided = req.headers.get("x-service-token");
-  if (!provided || provided !== expected) {
+  if (!provided || !timingSafeEqualStr(provided, expected)) {
     throw new AuthError("Invalid service token", 403);
   }
+}
+
+/** Constant-time string comparison to prevent timing attacks. */
+export function timingSafeEqualStr(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
 export class AuthError extends Error {

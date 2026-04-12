@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { logger } from "@/src/lib/logger";
+import { safeUrl } from "@/src/shared/utils";
+
+const DEFAULT_AVATAR_RE = /^avatar_([1-9]|10)$/;
+
+function sanitizeAvatar(raw: string): string | null {
+  const trimmed = raw.trim().slice(0, 500);
+  if (!trimmed) return null;
+  if (DEFAULT_AVATAR_RE.test(trimmed)) return trimmed;
+  const safe = safeUrl(trimmed);
+  if (safe === "#" || safe.startsWith("/") || safe.startsWith("#")) return null;
+  try {
+    const parsed = new URL(safe);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    return safe;
+  } catch {
+    return null;
+  }
+}
 
 const USER_SELECT = { id: true, email: true, name: true, phone: true, avatar: true, role: true, emailVerified: true, createdAt: true };
 
@@ -51,7 +69,9 @@ export async function PATCH(req: NextRequest) {
 
     if (typeof body.avatar === "string") {
       // avatar can be: "avatar_1" to "avatar_10" (default), URL (uploaded photo), or null (remove)
-      updates.avatar = body.avatar.trim().slice(0, 500) || null;
+      updates.avatar = sanitizeAvatar(body.avatar);
+    } else if (body.avatar === null) {
+      updates.avatar = null;
     }
 
     if (Object.keys(updates).length === 0) {
