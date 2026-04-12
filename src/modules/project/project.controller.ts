@@ -9,6 +9,14 @@ import { DomainService } from "@/src/modules/domain";
 import { sendDeleteConfirmationEmail } from "@/src/lib/email";
 import { setDeleteCode, getDeleteCode, clearDeleteCode } from "@/src/lib/delete-confirmation";
 import { logger } from "@/src/lib/logger";
+import { writeAudit } from "@/src/lib/audit";
+
+function adminFromHeaders(req: NextRequest): { id: string; email: string } {
+  return {
+    id: req.headers.get("x-admin-id") || "unknown",
+    email: req.headers.get("x-admin-email") || "unknown",
+  };
+}
 
 const service = new ProjectService();
 const domainService = new DomainService();
@@ -324,13 +332,24 @@ export async function handleInternalApprove(req: NextRequest, id: string) {
 
   try {
     const project = await service.approve(id);
+    const admin = adminFromHeaders(req);
+    await writeAudit({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      action: "approve",
+      targetType: "project",
+      targetId: id,
+      metadata: {
+        subdomain: project.subdomain ?? null,
+        customDomain: project.customDomain ?? null,
+        userId: project.userId,
+      },
+    });
     logger.info("admin_action", {
       type: "admin_action",
       action: "approve",
       projectId: id,
-      subdomain: project.subdomain ?? null,
-      customDomain: project.customDomain ?? null,
-      userId: project.userId,
+      adminId: admin.id,
     });
     return json(toApiResponse(project));
   } catch (e) {
@@ -350,14 +369,25 @@ export async function handleInternalReject(req: NextRequest, id: string) {
   try {
     const body = await req.json().catch(() => ({}));
     const project = await service.reject(id, body.reason);
+    const admin = adminFromHeaders(req);
+    await writeAudit({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      action: "reject",
+      targetType: "project",
+      targetId: id,
+      metadata: {
+        reason: body.reason ?? null,
+        subdomain: project.subdomain ?? null,
+        customDomain: project.customDomain ?? null,
+        userId: project.userId,
+      },
+    });
     logger.info("admin_action", {
       type: "admin_action",
       action: "reject",
       projectId: id,
-      subdomain: project.subdomain ?? null,
-      customDomain: project.customDomain ?? null,
-      userId: project.userId,
-      hasReason: !!body.reason,
+      adminId: admin.id,
     });
     return json(toApiResponse(project));
   } catch (e) {
@@ -365,4 +395,151 @@ export async function handleInternalReject(req: NextRequest, id: string) {
     if (e instanceof ServiceError) return error(e.message, e.status);
     return error("Internal server error", 500);
   }
+}
+
+export async function handleInternalUnpublish(req: NextRequest, id: string) {
+  try {
+    requireServiceToken(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  try {
+    const project = await service.adminUnpublish(id);
+    const admin = adminFromHeaders(req);
+    await writeAudit({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      action: "unpublish",
+      targetType: "project",
+      targetId: id,
+      metadata: {
+        subdomain: project.subdomain ?? null,
+        customDomain: project.customDomain ?? null,
+        userId: project.userId,
+      },
+    });
+    logger.info("admin_action", {
+      type: "admin_action",
+      action: "unpublish",
+      projectId: id,
+      adminId: admin.id,
+    });
+    return json(toApiResponse(project));
+  } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleInternalAdminDelete(req: NextRequest, id: string) {
+  try {
+    requireServiceToken(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  try {
+    // Capture display info before the soft delete so audit row has context
+    const existing = await service.adminGetById(id);
+    await service.adminDelete(id);
+    const admin = adminFromHeaders(req);
+    await writeAudit({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      action: "delete_project",
+      targetType: "project",
+      targetId: id,
+      metadata: {
+        subdomain: existing.subdomain ?? null,
+        customDomain: existing.customDomain ?? null,
+        userId: existing.userId,
+        previousStatus: existing.status,
+      },
+    });
+    logger.info("admin_action", {
+      type: "admin_action",
+      action: "delete_project",
+      projectId: id,
+      adminId: admin.id,
+    });
+    return json({ ok: true });
+  } catch (e) {
+    if (e instanceof AuthError) return error(e.message, e.status);
+    if (e instanceof ServiceError) return error(e.message, e.status);
+    return error("Internal server error", 500);
+  }
+}
+
+export async function handleInternalBulk(req: NextRequest) {
+  try {
+    requireServiceToken(req);
+  } catch (e: any) {
+    return error(e.message, e.status ?? 403);
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return error("Invalid body", 400);
+  }
+
+  const { ids, action, reason } = body as {
+    ids?: unknown;
+    action?: unknown;
+    reason?: unknown;
+  };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return error("ids array required", 400);
+  }
+  if (ids.length > 100) {
+    return error("Max 100 ids per request", 400);
+  }
+  if (!ids.every((id) => typeof id === "string")) {
+    return error("All ids must be strings", 400);
+  }
+  if (action !== "approve" && action !== "reject" && action !== "delete") {
+    return error("action must be approve | reject | delete", 400);
+  }
+
+  const admin = adminFromHeaders(req);
+  const results = await service.adminBulkAction(
+    ids as string[],
+    action,
+    typeof reason === "string" ? reason : undefined
+  );
+
+  // Write one audit row per successful id so history remains granular
+  for (const r of results) {
+    if (!r.ok) continue;
+    const auditAction =
+      action === "approve"
+        ? "approve"
+        : action === "reject"
+        ? "reject"
+        : "delete_project";
+    await writeAudit({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      action: auditAction,
+      targetType: "project",
+      targetId: r.id,
+      metadata: { bulk: true, reason: typeof reason === "string" ? reason : undefined },
+    });
+  }
+
+  logger.info("admin_action", {
+    type: "admin_action",
+    action: `bulk_${action}`,
+    adminId: admin.id,
+    count: ids.length,
+    successCount: results.filter((r) => r.ok).length,
+  });
+
+  return json({
+    total: results.length,
+    successCount: results.filter((r) => r.ok).length,
+    results,
+  });
 }
