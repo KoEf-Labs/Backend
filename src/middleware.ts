@@ -27,6 +27,8 @@ const PUBLIC_ROUTES = [
   "/api/site/live",
   "/api/domain/check",
   "/api/uploads",
+  // Internal service-to-service (AdminBackend → Backend) — auth handled per-route via x-service-token
+  "/api/internal",
 ];
 
 // Trusted proxy header — only trust X-Forwarded-For behind a reverse proxy
