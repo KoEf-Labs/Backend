@@ -25,5 +25,23 @@ module.exports = {
       // Memory limit (restart if exceeded)
       max_memory_restart: "512M",
     },
+    {
+      name: "cleanup-expired-tokens",
+      script: "node_modules/.bin/tsx",
+      args: "scripts/cleanup-expired-tokens.ts",
+      cwd: "./",
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: false,
+      // Run every day at 03:00
+      cron_restart: "0 3 * * *",
+      env: {
+        NODE_ENV: "production",
+      },
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+      error_file: "/var/log/pm2/cleanup-error.log",
+      out_file: "/var/log/pm2/cleanup-out.log",
+      merge_logs: true,
+    },
   ],
 };
