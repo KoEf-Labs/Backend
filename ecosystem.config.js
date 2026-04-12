@@ -43,5 +43,23 @@ module.exports = {
       out_file: "/var/log/pm2/cleanup-out.log",
       merge_logs: true,
     },
+    {
+      name: "aggregate-site-views",
+      script: "node_modules/.bin/tsx",
+      args: "scripts/aggregate-site-views.ts",
+      cwd: "./",
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: false,
+      // Run every day at 04:00 UTC (after token cleanup)
+      cron_restart: "0 4 * * *",
+      env: {
+        NODE_ENV: "production",
+      },
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+      error_file: "/var/log/pm2/aggregate-error.log",
+      out_file: "/var/log/pm2/aggregate-out.log",
+      merge_logs: true,
+    },
   ],
 };
