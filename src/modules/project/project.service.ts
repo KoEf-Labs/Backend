@@ -348,6 +348,118 @@ export class ProjectService {
       data: { deletedAt: new Date() },
     });
   }
+
+  /**
+   * Admin: take a published site offline.
+   *
+   * - status → DRAFT so the user can re-submit after editing
+   * - publishedContent → null (any fallback render falls back to draftContent)
+   * - static HTML removed from disk
+   * - render cache invalidated
+   *
+   * Does NOT delete the project or its draft content.
+   */
+  async adminUnpublish(id: string) {
+    const project = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!project) throw new ServiceError("Project not found", 404);
+    if (project.status !== ProjectStatus.PUBLISHED) {
+      throw new ServiceError("Only published projects can be unpublished", 400);
+    }
+
+    // Wipe disk first — if this fails we don't want to flip state and still
+    // serve the old static file.
+    if (project.subdomain || project.customDomain) {
+      try {
+        await publishService.removeStatic({
+          subdomain: project.subdomain,
+          customDomain: project.customDomain,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const { logger } = await import("@/src/lib/logger");
+        logger.error("admin_unpublish_static_remove_failed", {
+          projectId: id,
+          error: msg,
+        });
+      }
+    }
+
+    // Invalidate render cache for old published content
+    if (project.publishedContent) {
+      renderService.invalidateCache(
+        project.theme,
+        project.publishedContent as Record<string, unknown>
+      );
+    }
+
+    return prisma.project.update({
+      where: { id },
+      data: {
+        status: ProjectStatus.DRAFT,
+        publishedContent: Prisma.JsonNull,
+      },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Admin: soft-delete a project without requiring the user's delete
+   * confirmation code. Also removes static files from disk.
+   */
+  async adminDelete(id: string) {
+    const project = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!project) throw new ServiceError("Project not found", 404);
+
+    if (project.subdomain || project.customDomain) {
+      await publishService
+        .removeStatic({
+          subdomain: project.subdomain,
+          customDomain: project.customDomain,
+        })
+        .catch(() => {});
+    }
+
+    return prisma.project.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Bulk version of approve/reject/delete — processes up to N ids and
+   * returns a per-id result. Stops on no ids so the caller can show
+   * granular success/failure.
+   */
+  async adminBulkAction(
+    ids: string[],
+    action: "approve" | "reject" | "delete",
+    reason?: string
+  ): Promise<Array<{ id: string; ok: boolean; error?: string }>> {
+    const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        if (action === "approve") await this.approve(id);
+        else if (action === "reject") await this.reject(id, reason);
+        else if (action === "delete") await this.adminDelete(id);
+        results.push({ id, ok: true });
+      } catch (e) {
+        results.push({
+          id,
+          ok: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+    return results;
+  }
 }
 
 // ---------------------------------------------------------------------------
