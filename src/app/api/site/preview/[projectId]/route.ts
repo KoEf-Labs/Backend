@@ -14,17 +14,24 @@ function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function hasValidServiceToken(req: NextRequest): boolean {
+  const expected = process.env.INTERNAL_SERVICE_TOKEN;
+  if (!expected) return false;
+  return req.headers.get("x-service-token") === expected;
+}
+
 /**
  * GET /api/site/preview/:projectId
  *
- * Two modes:
- * - Authenticated (JWT) or ?draft=true → owner preview, renders draftContent
+ * Three modes:
+ * - Authenticated owner (JWT) → renders draftContent
+ * - Internal service token (AdminBackend) → renders draftContent
  * - Public (no auth) → renders publishedContent only
  */
 export async function GET(req: NextRequest, { params }: Params) {
   const { projectId } = await params;
   const userId = getUserId(req);
-  const isDraftPreview = req.nextUrl.searchParams.get("draft") === "true";
+  const isService = hasValidServiceToken(req);
 
   // 1. Fetch project
   let project;
@@ -45,8 +52,8 @@ export async function GET(req: NextRequest, { params }: Params) {
   // 2. Determine which content to render
   let content: Record<string, unknown>;
 
-  if (userId || isDraftPreview) {
-    // Owner preview → show draftContent
+  if (userId || isService) {
+    // Owner or admin preview → show draftContent
     content = project.draftContent as Record<string, unknown>;
   } else {
     // Public view → only show publishedContent
@@ -70,7 +77,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     // Published public pages get browser cache, drafts don't
     const cacheControl =
-      !userId && !isDraftPreview
+      !userId && !isService
         ? "public, max-age=300, stale-while-revalidate=60"
         : "no-cache, no-store";
 
