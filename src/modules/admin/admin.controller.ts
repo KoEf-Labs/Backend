@@ -162,6 +162,28 @@ export async function handleListProjectsAdmin(req: NextRequest) {
   return json(result);
 }
 
+// ── Time series / traffic ───────────────────────────────────────────
+
+export async function handleTimeseries(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const days = Math.min(
+    90,
+    Math.max(1, Number(req.nextUrl.searchParams.get("days")) || 30)
+  );
+  const data = await service.timeseries(days);
+  return json(data);
+}
+
+export async function handleTraffic(req: NextRequest) {
+  const guardRes = guard(req);
+  if (guardRes) return guardRes;
+  const limit = Number(req.nextUrl.searchParams.get("limit")) || 10;
+  const days = Number(req.nextUrl.searchParams.get("days")) || 30;
+  const data = await service.traffic({ limit, days });
+  return json(data);
+}
+
 // ── Audit log ────────────────────────────────────────────────────────
 
 export async function handleListAudit(req: NextRequest) {

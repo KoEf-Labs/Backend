@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { DomainService, DomainError } from "@/src/modules/domain";
 import { RenderService, RenderError } from "@/src/modules/render/render.service";
 import { ProjectStatus } from "@prisma/client";
+import { trackView } from "@/src/lib/site-views";
+import { getClientIp } from "@/src/lib/rate-limit";
 
 const domainService = new DomainService();
 const renderService = new RenderService();
@@ -49,6 +51,9 @@ export async function GET(req: NextRequest) {
   if (project.customDomain && project.domainVerificationStatus !== "VERIFIED") {
     return error("Domain not verified", 403);
   }
+
+  // Track view (non-blocking, Redis counter)
+  trackView(project.id, getClientIp(req)).catch(() => {});
 
   // Render
   try {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProjectService, ServiceError } from "@/src/modules/project/project.service";
 import { RenderService, RenderError } from "@/src/modules/render/render.service";
 import { getUserId, timingSafeEqualStr } from "@/src/lib/auth";
+import { trackView } from "@/src/lib/site-views";
+import { getClientIp } from "@/src/lib/rate-limit";
 
 const projectService = new ProjectService();
 const renderService = new RenderService();
@@ -68,6 +70,12 @@ export async function GET(req: NextRequest, { params }: Params) {
   // 3. Validate project has a theme
   if (!project.theme) {
     return error("Project has no theme assigned", 400);
+  }
+
+  // Track public views only — don't inflate counts for owner previews
+  // or admin previews.
+  if (!userId && !isService) {
+    trackView(project.id, getClientIp(req)).catch(() => {});
   }
 
   // 4. Render HTML

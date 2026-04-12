@@ -358,4 +358,119 @@ export class AdminService {
   }) {
     await writeAudit(entry as Parameters<typeof writeAudit>[0]);
   }
+
+  // ── Time series (last N days) ──────────────────────────────────────
+
+  async timeseries(days = 30) {
+    const now = new Date();
+    // Align to start of today in UTC so buckets line up
+    const startOfToday = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    );
+    const startDate = new Date(
+      startOfToday.getTime() - (days - 1) * 24 * 60 * 60 * 1000
+    );
+
+    const [users, projects] = await Promise.all([
+      prisma.user.findMany({
+        where: { createdAt: { gte: startDate } },
+        select: { createdAt: true },
+      }),
+      prisma.project.findMany({
+        where: { createdAt: { gte: startDate }, deletedAt: null },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    // Build day buckets — YYYY-MM-DD keyed
+    const usersByDay: Record<string, number> = {};
+    const projectsByDay: Record<string, number> = {};
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+      const key = d.toISOString().slice(0, 10);
+      usersByDay[key] = 0;
+      projectsByDay[key] = 0;
+    }
+
+    for (const u of users) {
+      const key = u.createdAt.toISOString().slice(0, 10);
+      if (key in usersByDay) usersByDay[key]++;
+    }
+    for (const p of projects) {
+      const key = p.createdAt.toISOString().slice(0, 10);
+      if (key in projectsByDay) projectsByDay[key]++;
+    }
+
+    return {
+      days,
+      buckets: Object.keys(usersByDay).map((date) => ({
+        date,
+        users: usersByDay[date],
+        projects: projectsByDay[date],
+      })),
+    };
+  }
+
+  // ── Traffic (top sites + totals) ───────────────────────────────────
+
+  async traffic(options?: { limit?: number; days?: number }) {
+    const limit = Math.min(50, Math.max(1, options?.limit ?? 10));
+    const days = Math.min(90, Math.max(1, options?.days ?? 30));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Aggregate SiteView rows in the window, group by project
+    const grouped = await prisma.siteView.groupBy({
+      by: ["projectId"],
+      where: { date: { gte: since } },
+      _sum: { count: true, uniqueIps: true },
+      orderBy: { _sum: { count: "desc" } },
+      take: limit,
+    });
+
+    if (grouped.length === 0) {
+      return { days, totalViews: 0, totalUniqueIps: 0, top: [] };
+    }
+
+    const projectIds = grouped.map((g) => g.projectId);
+    const projects = await prisma.project.findMany({
+      where: { id: { in: projectIds } },
+      select: {
+        id: true,
+        subdomain: true,
+        customDomain: true,
+        theme: true,
+        status: true,
+        userId: true,
+        user: { select: { email: true } },
+      },
+    });
+    const projectMap = new Map(projects.map((p) => [p.id, p]));
+
+    const top = grouped.map((g) => {
+      const p = projectMap.get(g.projectId);
+      return {
+        projectId: g.projectId,
+        views: g._sum.count ?? 0,
+        uniqueIps: g._sum.uniqueIps ?? 0,
+        subdomain: p?.subdomain ?? null,
+        customDomain: p?.customDomain ?? null,
+        theme: p?.theme ?? null,
+        status: p?.status ?? null,
+        userEmail: p?.user?.email ?? null,
+      };
+    });
+
+    // Totals across the window (not just top N)
+    const totals = await prisma.siteView.aggregate({
+      where: { date: { gte: since } },
+      _sum: { count: true, uniqueIps: true },
+    });
+
+    return {
+      days,
+      totalViews: totals._sum.count ?? 0,
+      totalUniqueIps: totals._sum.uniqueIps ?? 0,
+      top,
+    };
+  }
 }
