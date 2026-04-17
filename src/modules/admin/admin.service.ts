@@ -74,6 +74,11 @@ export class AdminService {
           suspendReason: true,
           lastActivityAt: true,
           createdAt: true,
+          // List-level profile badges. Only the flag + type here;
+          // the full identity record stays on getUserDetail so the
+          // list payload stays small.
+          profileCompleted: true,
+          accountType: true,
           _count: { select: { projects: { where: { deletedAt: null } } } },
         },
       }),
