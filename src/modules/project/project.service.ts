@@ -343,9 +343,16 @@ export class ProjectService {
       }).catch(() => {});
     }
 
+    // Release the subdomain/customDomain so someone else can reuse it
+    // while the soft-deleted row waits for the hard-delete cron. The
+    // @unique constraint would otherwise hold the name hostage.
     return prisma.project.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        subdomain: null,
+        customDomain: null,
+      },
     });
   }
 
@@ -427,9 +434,15 @@ export class ProjectService {
         .catch(() => {});
     }
 
+    // Release the name so another user can claim it immediately. See delete()
+    // for the same rationale.
     return prisma.project.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        subdomain: null,
+        customDomain: null,
+      },
     });
   }
 
