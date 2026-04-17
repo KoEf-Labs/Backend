@@ -107,50 +107,60 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Identity verification ────────────────────────────────────────
-    // TR citizens → MERNIS; everyone else → passport flow.
+    // Individual accounts verify at the personal level (MERNIS for TR,
+    // passport for everyone else). Corporate accounts verify at the
+    // company level — tax ID + company name checked below — so we skip
+    // the personal identity gate entirely for them.
     let identityVerified = false;
     let verifyReason: string | undefined;
 
-    if (country === "TR") {
-      const nationalId = (body.nationalId ?? "").trim();
-      if (!nationalId) {
-        return NextResponse.json(
-          { error: "TC kimlik numarası zorunlu" },
-          { status: 400 }
-        );
+    if (body.accountType === "INDIVIDUAL") {
+      if (country === "TR") {
+        const nationalId = (body.nationalId ?? "").trim();
+        if (!nationalId) {
+          return NextResponse.json(
+            { error: "TC kimlik numarası zorunlu" },
+            { status: 400 }
+          );
+        }
+        const res = await verifyMernis({
+          nationalId,
+          firstName,
+          lastName,
+          birthYear: dob.getFullYear(),
+        });
+        identityVerified = res.valid;
+        verifyReason = res.reason;
+      } else {
+        const passportNo = (body.passportNo ?? "").trim().toUpperCase();
+        if (!passportNo) {
+          return NextResponse.json(
+            { error: "Pasaport numarası zorunlu" },
+            { status: 400 }
+          );
+        }
+        const res = await verifyPassport({
+          passportNo,
+          country,
+          firstName,
+          lastName,
+          birthYear: dob.getFullYear(),
+        });
+        identityVerified = res.valid;
+        verifyReason = res.reason;
       }
-      const res = await verifyMernis({
-        nationalId,
-        firstName,
-        lastName,
-        birthYear: dob.getFullYear(),
-      });
-      identityVerified = res.valid;
-      verifyReason = res.reason;
-    } else {
-      const passportNo = (body.passportNo ?? "").trim().toUpperCase();
-      if (!passportNo) {
-        return NextResponse.json(
-          { error: "Pasaport numarası zorunlu" },
-          { status: 400 }
-        );
-      }
-      const res = await verifyPassport({
-        passportNo,
-        country,
-        firstName,
-        lastName,
-        birthYear: dob.getFullYear(),
-      });
-      identityVerified = res.valid;
-      verifyReason = res.reason;
-    }
 
-    if (!identityVerified) {
-      return NextResponse.json(
-        { error: verifyReason ?? "Kimlik doğrulaması başarısız" },
-        { status: 422 }
-      );
+      if (!identityVerified) {
+        return NextResponse.json(
+          { error: verifyReason ?? "Kimlik doğrulaması başarısız" },
+          { status: 422 }
+        );
+      }
+    } else {
+      // Corporate: mark verified once company fields validate below.
+      // Tax-ID format is the real check for now; company-name validation
+      // elsewhere (OCR / trade-registry lookup) is a future upgrade.
+      identityVerified = true;
     }
 
     // ── Corporate-only fields ────────────────────────────────────────
@@ -174,6 +184,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Persist ──────────────────────────────────────────────────────
+    // Identity columns: only populated for individuals. Corporate rows
+    // keep them null and carry identity via companyName + companyTaxId.
+    const isIndividual = body.accountType === "INDIVIDUAL";
     const fullName = `${firstName} ${lastName}`.trim();
     const user = await prisma.user.update({
       where: { id: userId },
@@ -183,9 +196,12 @@ export async function POST(req: NextRequest) {
         accountType: body.accountType,
         dateOfBirth: dob,
         country,
-        nationalId: country === "TR" ? body.nationalId!.trim() : null,
-        passportNo:
-          country === "TR" ? null : body.passportNo!.trim().toUpperCase(),
+        nationalId: isIndividual && country === "TR"
+          ? (body.nationalId ?? "").trim()
+          : null,
+        passportNo: isIndividual && country !== "TR"
+          ? (body.passportNo ?? "").trim().toUpperCase()
+          : null,
         companyName,
         companyTaxId,
         identityVerified: true,
