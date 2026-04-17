@@ -10,6 +10,7 @@
  * — useful for AdminBackend tools and support overrides.
  */
 import { prisma } from "@/src/lib/db";
+import { revokeEntitlementsForPayment } from "@/src/lib/entitlements";
 import { createIyzicoIntent, refundIyzico } from "./iyzico";
 import { createStripeIntent, refundStripe } from "./stripe";
 import {
@@ -115,6 +116,10 @@ export async function refundPayment(args: {
       refundReason: args.reason ?? null,
     },
   });
+
+  // Pull back anything this payment unlocked (premium themes etc.). Safe
+  // to call even when nothing was granted — it's a no-op then.
+  await revokeEntitlementsForPayment(payment.id);
 
   return {
     ...result,

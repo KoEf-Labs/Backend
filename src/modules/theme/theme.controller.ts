@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ThemeService, ThemeError } from "./theme.service";
+import { getUserId } from "@/src/lib/auth";
 
 const service = new ThemeService();
 
@@ -12,20 +13,52 @@ function error(message: string, status: number) {
 }
 
 // GET /api/themes → list all themes
-export async function handleListThemes() {
+// Response includes isPremium + prices for all visible themes; if the
+// caller is authenticated, each premium theme carries `owned: true|false`
+// so the client can render a lock vs. a "selectable" badge without a
+// second round trip to /entitlements.
+export async function handleListThemes(req?: NextRequest) {
   try {
     const themes = service.getThemes();
-    // Filter out admin-disabled themes so mobile users don't see them
     const { prisma } = await import("@/src/lib/db");
-    const disabled = await prisma.themeConfig.findMany({
-      where: { enabled: false },
-      select: { name: true },
+    const configs = await prisma.themeConfig.findMany({
+      select: {
+        name: true,
+        enabled: true,
+        isPremium: true,
+        priceTry: true,
+        priceUsd: true,
+      },
     });
-    const disabledSet = new Set(disabled.map((t) => t.name));
-    const filtered = (themes as Array<{ name: string }>).filter(
-      (t) => !disabledSet.has(t.name)
-    );
-    return json({ themes: filtered });
+    const byName = new Map(configs.map((c) => [c.name, c]));
+
+    // Filter out admin-disabled themes so mobile users don't see them
+    const filtered = themes.filter((t) => byName.get(t.name)?.enabled !== false);
+
+    // If a user is authenticated, pull their entitlements once.
+    const userId = req ? getUserId(req) : null;
+    const owned = new Set<string>();
+    if (userId) {
+      const ent = await prisma.userThemeEntitlement.findMany({
+        where: { userId },
+        select: { themeName: true },
+      });
+      for (const e of ent) owned.add(e.themeName);
+    }
+
+    const enriched = filtered.map((t) => {
+      const cfg = byName.get(t.name);
+      const isPremium = cfg?.isPremium ?? false;
+      return {
+        ...t,
+        isPremium,
+        priceTry: cfg?.priceTry ?? null,
+        priceUsd: cfg?.priceUsd ?? null,
+        owned: isPremium ? owned.has(t.name) : true,
+      };
+    });
+
+    return json({ themes: enriched });
   } catch (e) {
     if (e instanceof ThemeError) return error(e.message, e.status);
     return error("Internal server error", 500);

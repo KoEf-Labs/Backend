@@ -5,6 +5,10 @@ import {
   constructStripeEvent,
 } from "@/src/lib/payments/stripe";
 import { PaymentError } from "@/src/lib/payments";
+import {
+  grantEntitlementForPayment,
+  revokeEntitlementsForPayment,
+} from "@/src/lib/entitlements";
 
 /**
  * POST /api/payments/webhook/stripe
@@ -90,4 +94,12 @@ async function markByProviderTxnId(
       refundedAt: status === "REFUNDED" ? new Date() : undefined,
     },
   });
+
+  // Flip entitlements based on the new state. Grant on SUCCEEDED, revoke
+  // on REFUNDED — FAILED has no side effect beyond the status update.
+  if (status === "SUCCEEDED") {
+    await grantEntitlementForPayment(payment.id);
+  } else if (status === "REFUNDED") {
+    await revokeEntitlementsForPayment(payment.id);
+  }
 }

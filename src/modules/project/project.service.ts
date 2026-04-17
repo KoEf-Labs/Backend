@@ -28,6 +28,35 @@ export interface UpdateProjectInput {
 // ---------------------------------------------------------------------------
 
 const validator = new ContentValidator();
+
+/**
+ * Gate: ensure the user can use this theme. Non-premium themes are always
+ * allowed; premium themes require a UserThemeEntitlement row. Admin-
+ * disabled themes are rejected outright.
+ *
+ * Throws ServiceError so the controller can return the right HTTP status.
+ */
+async function assertThemeAccess(userId: string, theme: string): Promise<void> {
+  const cfg = await prisma.themeConfig.findUnique({ where: { name: theme } });
+  if (cfg && !cfg.enabled) {
+    throw new ServiceError("Theme is disabled", 403);
+  }
+  if (!cfg?.isPremium) return; // free themes bypass
+  const ent = await prisma.userThemeEntitlement.findUnique({
+    where: { userId_themeName: { userId, themeName: theme } },
+  });
+  if (ent) return;
+  // Admins can use any theme for QA / demos.
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (user?.role === "ADMIN") return;
+  throw new ServiceError(
+    "This is a premium theme — purchase required",
+    402 // Payment Required
+  );
+}
 const renderService = new RenderService();
 const publishService = new PublishService();
 
@@ -107,6 +136,8 @@ export class ProjectService {
       throw new ServiceError("userId and theme are required", 400);
     }
 
+    await assertThemeAccess(input.userId, input.theme);
+
     if (input.contentJson && typeof input.contentJson === "object") {
       const sanitized = validator.sanitizeContent(
         input.theme,
@@ -145,6 +176,13 @@ export class ProjectService {
   async update(id: string, userId: string, input: UpdateProjectInput) {
     const project = await this.getByIdForUser(id, userId);
     const theme = input.theme || project.theme;
+
+    // Only re-check access when the user is actually switching themes —
+    // otherwise edits on an already-owned project would suddenly fail if
+    // admin later changed the theme's premium status.
+    if (input.theme !== undefined && input.theme !== project.theme) {
+      await assertThemeAccess(userId, input.theme);
+    }
 
     if (input.contentJson && typeof input.contentJson === "object") {
       const sanitized = validator.sanitizeContent(

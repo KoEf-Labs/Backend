@@ -3,6 +3,7 @@ import { prisma } from "@/src/lib/db";
 import { logger } from "@/src/lib/logger";
 import { retrieveIyzicoCheckout } from "@/src/lib/payments/iyzico";
 import { PaymentError } from "@/src/lib/payments";
+import { grantEntitlementForPayment } from "@/src/lib/entitlements";
 
 /**
  * POST /api/payments/webhook/iyzico
@@ -50,6 +51,11 @@ export async function POST(req: NextRequest) {
         where: { id: payment.userId },
         data: { iyzicoCardUserKey: result.cardUserKey },
       });
+    }
+
+    // Grant whatever the user just bought (premium theme etc.).
+    if (result.success) {
+      await grantEntitlementForPayment(payment.id);
     }
 
     return htmlResponse(
