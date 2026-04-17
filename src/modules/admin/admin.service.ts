@@ -108,6 +108,19 @@ export class AdminService {
         lastActivityAt: true,
         createdAt: true,
         updatedAt: true,
+        // Profile / identity fields from the post-email-verify setup flow.
+        // Nullable until the user completes that step. Corporate rows
+        // carry identity through companyName + companyTaxId rather than
+        // nationalId/passportNo.
+        profileCompleted: true,
+        identityVerified: true,
+        accountType: true,
+        dateOfBirth: true,
+        country: true,
+        nationalId: true,
+        passportNo: true,
+        companyName: true,
+        companyTaxId: true,
         projects: {
           where: { deletedAt: null },
           select: {
