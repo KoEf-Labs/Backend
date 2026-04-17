@@ -45,10 +45,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       payments: items,
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (err) {
     if (err && (err as { name?: string }).name === "AuthError") {
