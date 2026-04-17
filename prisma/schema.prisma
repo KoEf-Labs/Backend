@@ -40,6 +40,11 @@ model User {
   // don't create orphan accounts.
   googleId        String?             @unique
   appleId         String?             @unique
+  // Saved customer references for each payment provider. Populated on
+  // first successful charge; reused so the user can pay with a saved
+  // card on subsequent purchases.
+  stripeCustomerId   String?          @unique
+  iyzicoCardUserKey  String?          @unique
   suspended       Boolean             @default(false)
   suspendedAt     DateTime?
   suspendReason   String?
@@ -63,6 +68,7 @@ model User {
   projects        Project[]
   refreshTokens   RefreshToken[]
   verifyTokens    VerificationToken[]
+  payments        Payment[]
 
   @@index([suspended])
   @@index([createdAt])
@@ -193,4 +199,45 @@ model ThemeConfig {
   disabledBy String?
   disabledReason String?
   updatedAt DateTime @updatedAt
+}
+
+/// One-time payments. Created when a user kicks off a purchase; flipped to
+/// SUCCEEDED/FAILED by the provider webhook. Amounts are stored in the
+/// smallest currency unit (cents for USD, kuruş for TRY) to avoid float.
+model Payment {
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  provider        PaymentProvider
+  providerTxnId   String?         @unique // filled by webhook
+  amount          Int             // smallest unit (cents/kuruş)
+  currency        String          // ISO-4217 uppercase (USD, TRY, EUR…)
+  status          PaymentStatus   @default(PENDING)
+  purpose         String          // "premium_theme:gradient" / "custom_domain:..."
+  // Optional link back to the thing being paid for. For now we keep it as a
+  // free-form string in `purpose` — when we have a proper Product catalog we
+  // can add a FK. Refunds populate refundedAt and refundReason.
+  refundedAt      DateTime?
+  refundReason    String?
+  // Raw response blob for debugging (no card data). Providers return
+  // lots of context; trim to what we actually render in admin.
+  providerMeta    Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([provider])
+}
+
+enum PaymentProvider {
+  STRIPE
+  IYZICO
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
 }
