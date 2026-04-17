@@ -77,7 +77,7 @@ export const logger = {
 
   /** Log an auth event */
   auth: (
-    event: "login" | "register" | "logout" | "refresh" | "login_failed" | "password_reset",
+    event: "login" | "register" | "logout" | "refresh" | "login_failed" | "password_reset" | "oauth_login" | "oauth_signup",
     meta?: Record<string, unknown>
   ) => {
     log("info", `auth:${event}`, { type: "auth", event, ...meta });

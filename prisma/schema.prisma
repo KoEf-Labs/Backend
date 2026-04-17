@@ -34,6 +34,12 @@ model User {
   avatar          String?
   role            Role                @default(USER)
   emailVerified   Boolean             @default(false)
+  // Social login IDs. Populated when the user links a provider (either at
+  // signup via OAuth, or later from settings). An email/password user with
+  // the same email will be automatically linked on OAuth sign-in so we
+  // don't create orphan accounts.
+  googleId        String?             @unique
+  appleId         String?             @unique
   suspended       Boolean             @default(false)
   suspendedAt     DateTime?
   suspendReason   String?
