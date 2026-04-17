@@ -39,6 +39,19 @@ model User {
   suspendReason   String?
   lastActivityAt  DateTime?
   mustChangePwd   Boolean             @default(false)
+  // Profile completion (post email-verify, pre dashboard).
+  // identityVerified is decided by IdentityVerificationService. Today it's a
+  // stub that always returns true; when we wire up real MERNIS/passport it
+  // will gate access via profileCompleted (no profile → no dashboard).
+  profileCompleted   Boolean         @default(false)
+  identityVerified   Boolean         @default(false)
+  accountType        AccountType?
+  dateOfBirth        DateTime?
+  country            String?          // ISO 3166-1 alpha-2 (TR, US, DE…)
+  nationalId         String?          // TR citizens only (11 digits)
+  passportNo         String?          // foreign citizens
+  companyName        String?
+  companyTaxId       String?          // TR: 10 digits
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   projects        Project[]
@@ -47,6 +60,12 @@ model User {
 
   @@index([suspended])
   @@index([createdAt])
+  @@index([profileCompleted])
+}
+
+enum AccountType {
+  INDIVIDUAL
+  CORPORATE
 }
 
 enum VerificationTokenType {

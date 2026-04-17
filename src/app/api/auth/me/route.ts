@@ -21,7 +21,25 @@ function sanitizeAvatar(raw: string): string | null {
   }
 }
 
-const USER_SELECT = { id: true, email: true, name: true, phone: true, avatar: true, role: true, emailVerified: true, createdAt: true };
+const USER_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  phone: true,
+  avatar: true,
+  role: true,
+  emailVerified: true,
+  profileCompleted: true,
+  identityVerified: true,
+  accountType: true,
+  dateOfBirth: true,
+  country: true,
+  nationalId: true,
+  passportNo: true,
+  companyName: true,
+  companyTaxId: true,
+  createdAt: true,
+};
 
 export async function GET(req: NextRequest) {
   try {
