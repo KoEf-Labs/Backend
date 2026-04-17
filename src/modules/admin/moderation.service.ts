@@ -227,9 +227,52 @@ export class ModerationService {
         enabled: c ? c.enabled : true,
         disabledBy: c?.disabledBy ?? null,
         disabledReason: c?.disabledReason ?? null,
+        isPremium: c?.isPremium ?? false,
+        priceTry: c?.priceTry ?? null,
+        priceUsd: c?.priceUsd ?? null,
         updatedAt: c?.updatedAt ?? null,
       };
     });
+  }
+
+  /**
+   * Admin patch for premium state + pricing. Separate from setThemeEnabled
+   * because those two controls live on different admin panels (enable/
+   * disable is moderation, pricing is product config). A theme can be
+   * premium with null price — the purchase endpoint returns 409 then.
+   */
+  async updateThemeSettings(
+    name: string,
+    patch: {
+      isPremium?: boolean;
+      priceTry?: number | null;
+      priceUsd?: number | null;
+    },
+    admin: { id: string; email: string }
+  ) {
+    const themeDir = path.join(THEMES_DIR, name);
+    const stat = await fs.stat(themeDir).catch(() => null);
+    if (!stat?.isDirectory()) throw new Error("Tema bulunamadı");
+
+    const data: Record<string, unknown> = {};
+    if (patch.isPremium !== undefined) data.isPremium = patch.isPremium;
+    if (patch.priceTry !== undefined) data.priceTry = patch.priceTry;
+    if (patch.priceUsd !== undefined) data.priceUsd = patch.priceUsd;
+
+    const entry = await prisma.themeConfig.upsert({
+      where: { name },
+      create: { name, enabled: true, ...data },
+      update: data,
+    });
+    await writeAudit({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      action: "update_settings",
+      targetType: "system",
+      targetId: `theme:${name}`,
+      metadata: patch,
+    });
+    return entry;
   }
 
   async setThemeEnabled(

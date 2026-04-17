@@ -198,7 +198,31 @@ model ThemeConfig {
   enabled   Boolean  @default(true)
   disabledBy String?
   disabledReason String?
+  // Premium = paywalled. Users must either own an entitlement
+  // (UserThemeEntitlement) or be an admin to select the theme. Prices
+  // are per-theme because admin sets them individually; nullable because
+  // a non-premium theme has no price.
+  isPremium Boolean  @default(false)
+  priceTry  Int?     // kuruş (14900 = ₺149.00)
+  priceUsd  Int?     // cents  (999   = $9.99)
   updatedAt DateTime @updatedAt
+
+  entitlements UserThemeEntitlement[]
+}
+
+/// Tracks which premium themes each user has unlocked. Non-premium themes
+/// never get a row here — only the ones you actually paid for. Composite
+/// PK because a user can own any given theme at most once.
+model UserThemeEntitlement {
+  userId     String
+  themeName  String
+  paymentId  String?  // link back to the charge that unlocked it
+  acquiredAt DateTime @default(now())
+
+  theme ThemeConfig @relation(fields: [themeName], references: [name])
+
+  @@id([userId, themeName])
+  @@index([userId])
 }
 
 /// One-time payments. Created when a user kicks off a purchase; flipped to

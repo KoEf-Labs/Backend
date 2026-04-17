@@ -282,13 +282,37 @@ export async function handleToggleTheme(req: NextRequest, name: string) {
   const admin = adminFromHeaders(req);
   const body = await req.json().catch(() => ({}));
   try {
-    const entry = await moderationService.setThemeEnabled(
-      name,
-      body?.enabled === true,
-      typeof body?.reason === "string" ? body.reason : null,
-      admin
-    );
-    return json(entry);
+    // Enable/disable is only touched when `enabled` is explicitly sent —
+    // that way pricing edits don't accidentally re-enable a disabled theme.
+    if (typeof body?.enabled === "boolean") {
+      await moderationService.setThemeEnabled(
+        name,
+        body.enabled,
+        typeof body?.reason === "string" ? body.reason : null,
+        admin
+      );
+    }
+
+    const pricingPatch: Record<string, unknown> = {};
+    if (typeof body?.isPremium === "boolean") {
+      pricingPatch.isPremium = body.isPremium;
+    }
+    if ("priceTry" in (body ?? {})) {
+      pricingPatch.priceTry =
+        body.priceTry === null ? null : Number(body.priceTry);
+    }
+    if ("priceUsd" in (body ?? {})) {
+      pricingPatch.priceUsd =
+        body.priceUsd === null ? null : Number(body.priceUsd);
+    }
+    if (Object.keys(pricingPatch).length > 0) {
+      await moderationService.updateThemeSettings(name, pricingPatch, admin);
+    }
+
+    // Return the merged row so the client has the latest state.
+    const themes = await moderationService.listThemes();
+    const latest = themes.find((t) => t.name === name);
+    return json(latest ?? { name });
   } catch (e) {
     return error(e instanceof Error ? e.message : "Failed", 400);
   }

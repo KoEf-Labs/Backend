@@ -1,0 +1,11 @@
+{
+  "sections": { "hero": true },
+  "navbar": { "logo": "Premium Brand" },
+  "hero": {
+    "name": "Premium Site",
+    "title": "Modern, dikkat çekici bir premium tema.",
+    "subtitle": "Bu tema şimdilik bir yer tutucudur. Gerçek tasarımı birlikte yapacağız.",
+    "buttonText": "Keşfet",
+    "buttonLink": "#"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "sections": {
+    "type": "sectionToggles",
+    "label": "Bölümler",
+    "fields": {
+      "hero": { "type": "toggle", "label": "Hero", "default": true }
+    }
+  },
+  "navbar": {
+    "type": "group",
+    "label": "Navigation",
+    "fields": {
+      "logo": { "type": "text", "label": "Logo" }
+    }
+  },
+  "hero": {
+    "type": "group",
+    "label": "Hero",
+    "fields": {
+      "name": { "type": "text", "label": "Ad" },
+      "title": { "type": "text", "label": "Başlık" },
+      "subtitle": { "type": "textarea", "label": "Alt başlık" },
+      "buttonText": { "type": "text", "label": "CTA" },
+      "buttonLink": { "type": "text", "label": "CTA bağlantı" }
+    }
+  }
+}
