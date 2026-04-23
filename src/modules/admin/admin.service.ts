@@ -139,6 +139,24 @@ export class AdminService {
           },
           orderBy: { updatedAt: "desc" },
         },
+        // Most-recent subscription per user — admin uses it to see
+        // the active tier, provider, and renewal/expiry at a glance.
+        // We don't filter by status here; expired/refunded rows still
+        // matter for the audit trail.
+        subscriptions: {
+          orderBy: { currentPeriodEnd: "desc" },
+          take: 5,
+          include: {
+            plan: {
+              select: {
+                id: true,
+                tier: true,
+                interval: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
     return user;
