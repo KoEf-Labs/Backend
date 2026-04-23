@@ -26,49 +26,50 @@ enum DomainVerificationStatus {
 }
 
 model User {
-  id              String              @id @default(uuid())
-  email           String              @unique
-  passwordHash    String
-  name            String
-  phone           String?
-  avatar          String?
-  role            Role                @default(USER)
-  emailVerified   Boolean             @default(false)
+  id                String              @id @default(uuid())
+  email             String              @unique
+  passwordHash      String
+  name              String
+  phone             String?
+  avatar            String?
+  role              Role                @default(USER)
+  emailVerified     Boolean             @default(false)
   // Social login IDs. Populated when the user links a provider (either at
   // signup via OAuth, or later from settings). An email/password user with
   // the same email will be automatically linked on OAuth sign-in so we
   // don't create orphan accounts.
-  googleId        String?             @unique
-  appleId         String?             @unique
+  googleId          String?             @unique
+  appleId           String?             @unique
   // Saved customer references for each payment provider. Populated on
   // first successful charge; reused so the user can pay with a saved
   // card on subsequent purchases.
-  stripeCustomerId   String?          @unique
-  iyzicoCardUserKey  String?          @unique
-  suspended       Boolean             @default(false)
-  suspendedAt     DateTime?
-  suspendReason   String?
-  lastActivityAt  DateTime?
-  mustChangePwd   Boolean             @default(false)
+  stripeCustomerId  String?             @unique
+  iyzicoCardUserKey String?             @unique
+  suspended         Boolean             @default(false)
+  suspendedAt       DateTime?
+  suspendReason     String?
+  lastActivityAt    DateTime?
+  mustChangePwd     Boolean             @default(false)
   // Profile completion (post email-verify, pre dashboard).
   // identityVerified is decided by IdentityVerificationService. Today it's a
   // stub that always returns true; when we wire up real MERNIS/passport it
   // will gate access via profileCompleted (no profile → no dashboard).
-  profileCompleted   Boolean         @default(false)
-  identityVerified   Boolean         @default(false)
-  accountType        AccountType?
-  dateOfBirth        DateTime?
-  country            String?          // ISO 3166-1 alpha-2 (TR, US, DE…)
-  nationalId         String?          // TR citizens only (11 digits)
-  passportNo         String?          // foreign citizens
-  companyName        String?
-  companyTaxId       String?          // TR: 10 digits
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  projects        Project[]
-  refreshTokens   RefreshToken[]
-  verifyTokens    VerificationToken[]
-  payments        Payment[]
+  profileCompleted  Boolean             @default(false)
+  identityVerified  Boolean             @default(false)
+  accountType       AccountType?
+  dateOfBirth       DateTime?
+  country           String? // ISO 3166-1 alpha-2 (TR, US, DE…)
+  nationalId        String? // TR citizens only (11 digits)
+  passportNo        String? // foreign citizens
+  companyName       String?
+  companyTaxId      String? // TR: 10 digits
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  projects          Project[]
+  refreshTokens     RefreshToken[]
+  verifyTokens      VerificationToken[]
+  payments          Payment[]
+  subscriptions     Subscription[]
 
   @@index([suspended])
   @@index([createdAt])
@@ -111,22 +112,22 @@ model RefreshToken {
 }
 
 model Project {
-  id               String        @id @default(uuid())
-  userId           String
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme            String
-  draftContent               Json
-  publishedContent           Json?
-  status                     ProjectStatus              @default(DRAFT)
-  subdomain                  String?                    @unique
-  customDomain               String?                    @unique
-  rejectReason               String?
-  domainVerificationStatus   DomainVerificationStatus?
-  domainVerifiedAt           DateTime?
-  deletedAt                  DateTime?
-  createdAt                  DateTime                   @default(now())
-  updatedAt                  DateTime                   @updatedAt
-  siteViews                  SiteView[]
+  id                       String                    @id @default(uuid())
+  userId                   String
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                    String
+  draftContent             Json
+  publishedContent         Json?
+  status                   ProjectStatus             @default(DRAFT)
+  subdomain                String?                   @unique
+  customDomain             String?                   @unique
+  rejectReason             String?
+  domainVerificationStatus DomainVerificationStatus?
+  domainVerifiedAt         DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  siteViews                SiteView[]
 
   @@index([userId])
   @@index([userId, deletedAt])
@@ -156,13 +157,13 @@ model AuditLog {
 /// Daily traffic counter per project. Populated by a background cron that
 /// consumes Redis counters written by /api/site/live and preview endpoints.
 model SiteView {
-  id         String   @id @default(uuid())
-  projectId  String
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  date       DateTime // truncated to midnight UTC
-  count      Int      @default(0)
-  uniqueIps  Int      @default(0)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      DateTime // truncated to midnight UTC
+  count     Int      @default(0)
+  uniqueIps Int      @default(0)
+  createdAt DateTime @default(now())
 
   @@unique([projectId, date])
   @@index([date])
@@ -194,18 +195,18 @@ model DomainBlacklist {
 /// Disabled themes are hidden from /api/site/themes and rejected at
 /// project create/update.
 model ThemeConfig {
-  name      String   @id // matches themes/{name} directory
-  enabled   Boolean  @default(true)
-  disabledBy String?
+  name           String   @id // matches themes/{name} directory
+  enabled        Boolean  @default(true)
+  disabledBy     String?
   disabledReason String?
   // Premium = paywalled. Users must either own an entitlement
   // (UserThemeEntitlement) or be an admin to select the theme. Prices
   // are per-theme because admin sets them individually; nullable because
   // a non-premium theme has no price.
-  isPremium Boolean  @default(false)
-  priceTry  Int?     // kuruş (14900 = ₺149.00)
-  priceUsd  Int?     // cents  (999   = $9.99)
-  updatedAt DateTime @updatedAt
+  isPremium      Boolean  @default(false)
+  priceTry       Int? // kuruş (14900 = ₺149.00)
+  priceUsd       Int? // cents  (999   = $9.99)
+  updatedAt      DateTime @updatedAt
 
   entitlements UserThemeEntitlement[]
 }
@@ -216,7 +217,7 @@ model ThemeConfig {
 model UserThemeEntitlement {
   userId     String
   themeName  String
-  paymentId  String?  // link back to the charge that unlocked it
+  paymentId  String? // link back to the charge that unlocked it
   acquiredAt DateTime @default(now())
 
   theme ThemeConfig @relation(fields: [themeName], references: [name])
@@ -229,25 +230,25 @@ model UserThemeEntitlement {
 /// SUCCEEDED/FAILED by the provider webhook. Amounts are stored in the
 /// smallest currency unit (cents for USD, kuruş for TRY) to avoid float.
 model Payment {
-  id              String          @id @default(uuid())
-  userId          String
-  user            User            @relation(fields: [userId], references: [id])
-  provider        PaymentProvider
-  providerTxnId   String?         @unique // filled by webhook
-  amount          Int             // smallest unit (cents/kuruş)
-  currency        String          // ISO-4217 uppercase (USD, TRY, EUR…)
-  status          PaymentStatus   @default(PENDING)
-  purpose         String          // "premium_theme:gradient" / "custom_domain:..."
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  provider      PaymentProvider
+  providerTxnId String?         @unique // filled by webhook
+  amount        Int // smallest unit (cents/kuruş)
+  currency      String // ISO-4217 uppercase (USD, TRY, EUR…)
+  status        PaymentStatus   @default(PENDING)
+  purpose       String // "premium_theme:gradient" / "custom_domain:..."
   // Optional link back to the thing being paid for. For now we keep it as a
   // free-form string in `purpose` — when we have a proper Product catalog we
   // can add a FK. Refunds populate refundedAt and refundReason.
-  refundedAt      DateTime?
-  refundReason    String?
+  refundedAt    DateTime?
+  refundReason  String?
   // Raw response blob for debugging (no card data). Providers return
   // lots of context; trim to what we actually render in admin.
-  providerMeta    Json?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  providerMeta  Json?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   @@index([userId, createdAt])
   @@index([status])
@@ -264,4 +265,124 @@ enum PaymentStatus {
   SUCCEEDED
   FAILED
   REFUNDED
+}
+
+// ─── Subscriptions / Plans ──────────────────────────────────────────────
+//
+// A user has at most ONE active Subscription at any given time. Cross-
+// channel (App Store / Play Store / Stripe / Iyzico) — whichever bills
+// the user, the row here is the single source of truth the feature gate
+// checks against.
+//
+// Plans are admin-managed: name, price per currency, per-interval. The
+// actual store product IDs (Apple's productId, Google's sku, Stripe's
+// priceId) live as nullable fields so the same plan can be sold
+// through all channels with one row. Admin adds a new plan row, fills
+// in whichever store IDs are configured, rest stays empty.
+
+enum PlanTier {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionInterval {
+  MONTHLY
+  YEARLY
+  LIFETIME // for Free or manual comp
+}
+
+enum SubscriptionProvider {
+  APPLE
+  GOOGLE
+  STRIPE
+  IYZICO
+  MANUAL // admin grant, comp accounts, staff
+}
+
+enum SubscriptionStatus {
+  ACTIVE // paid and current
+  TRIALING // paid not yet started billing (grace period)
+  PAST_DUE // renewal failed, still has access for grace window
+  CANCELED // user canceled, still active until currentPeriodEnd
+  EXPIRED // period ended, no access
+  REFUNDED // provider refunded, immediately expired
+}
+
+/// Plan catalog. One row per tier+interval combination. Example rows:
+///   (PRO,     MONTHLY, $2.99 / €2.99 / ₺130)
+///   (PRO,     YEARLY,  $19.99 / €19.99 / ₺900)
+///   (BUSINESS,MONTHLY, $7.99 / €7.99 / ₺349)
+///   (BUSINESS,YEARLY,  $54.99 / €54.99 / ₺2399)
+///   (FREE,    LIFETIME, 0) — virtual row, never billed, granted by default
+///
+/// Prices are in the smallest currency unit (cents, kuruş) to avoid
+/// float. Nulls mean "not sold in this currency" — Apple/Google handle
+/// their own per-region pricing via their product configuration so the
+/// priceCents fields here mostly exist for Stripe (web) and Iyzico.
+model Plan {
+  id            String               @id @default(uuid())
+  tier          PlanTier
+  interval      SubscriptionInterval
+  // Display
+  name          String // "Pro Monthly", "Business Yearly"
+  description   String?
+  features      Json // feature flags exposed to client
+  // Pricing — smallest unit. Null = not offered in this currency.
+  priceUsd      Int?
+  priceEur      Int?
+  priceTry      Int?
+  // Store product IDs. Keep all three; only populate what's live.
+  applePriceId  String?              @unique // App Store productId
+  googlePriceId String?              @unique // Play Store productId / sku
+  stripePriceId String?              @unique // Stripe Price id (price_xxx)
+  // Enable/disable without deleting the row — preserves history.
+  active        Boolean              @default(true)
+  // Sort order on the pricing page.
+  sortOrder     Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  subscriptions Subscription[]
+
+  @@unique([tier, interval])
+  @@index([active, sortOrder])
+}
+
+/// A subscription connecting a user to a plan via one provider. The
+/// active row for a user is: status IN (ACTIVE, TRIALING, PAST_DUE,
+/// CANCELED) AND currentPeriodEnd > now().
+///
+/// Lifecycle events (payment succeeded, renewed, canceled, refunded)
+/// come from the provider webhooks and update this row. The user's
+/// "am I Pro?" check reads the most-recent subscription via effective
+/// plan tier.
+model Subscription {
+  id                 String               @id @default(uuid())
+  userId             String
+  user               User                 @relation(fields: [userId], references: [id])
+  planId             String
+  plan               Plan                 @relation(fields: [planId], references: [id])
+  provider           SubscriptionProvider
+  // Provider-side identifier. Apple: originalTransactionId. Google:
+  // purchaseToken. Stripe: sub_xxx. Iyzico: their subscription id.
+  providerSubId      String?              @unique
+  status             SubscriptionStatus   @default(ACTIVE)
+  // Billing period the user is currently paid for. We gate access on
+  // currentPeriodEnd > now(), regardless of status, during grace.
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  // When the user hit "cancel" — they retain access until periodEnd.
+  // Null means not canceled.
+  canceledAt         DateTime?
+  // When a refund landed. Immediate access loss.
+  refundedAt         DateTime?
+  // Raw latest event payload for debugging. Don't store PII or cards.
+  providerMeta       Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([userId, status])
+  @@index([providerSubId])
+  @@index([currentPeriodEnd])
 }
