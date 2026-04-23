@@ -28,6 +28,12 @@ const PUBLIC_ROUTES = [
   "/api/site/live",
   "/api/domain/check",
   "/api/uploads",
+  // Public pricing — unauth users viewing the pricing page need this.
+  // Authenticated callers still get extra fields (activeTier) when the
+  // route reads their JWT, but entry is allowed without one.
+  "/api/plans",
+  // Store webhooks — Apple/Google post with their own signing, not a Bearer.
+  "/api/subscriptions/webhook",
   // Internal service-to-service (AdminBackend → Backend) — auth handled per-route via x-service-token
   "/api/internal",
 ];
