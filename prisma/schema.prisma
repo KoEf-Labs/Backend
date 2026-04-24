@@ -377,6 +377,11 @@ model Subscription {
   canceledAt         DateTime?
   // When a refund landed. Immediate access loss.
   refundedAt         DateTime?
+  // When renewal failed / user canceled: grace window end. While now() <
+  // graceEndsAt the user keeps their paid tier; after that they drop to
+  // Free. Set from SubscriptionSettings.gracePeriodDays when status
+  // moves to PAST_DUE or CANCELED. Null = no grace active.
+  graceEndsAt        DateTime?
   // Raw latest event payload for debugging. Don't store PII or cards.
   providerMeta       Json?
   createdAt          DateTime             @default(now())
@@ -385,4 +390,17 @@ model Subscription {
   @@index([userId, status])
   @@index([providerSubId])
   @@index([currentPeriodEnd])
+  @@index([graceEndsAt])
+}
+
+/// App-wide subscription knobs. Singleton — one row, id always "default".
+/// Edited from the admin panel; consulted by the webhook + cron code
+/// when setting grace windows.
+model SubscriptionSettings {
+  id               String   @id @default("default")
+  // How many days after renewal failure / cancellation the user keeps
+  // their paid tier. Webhook / cron uses this value at the moment of
+  // transition; changing it here won't retro-adjust existing rows.
+  gracePeriodDays  Int      @default(7)
+  updatedAt        DateTime @updatedAt
 }

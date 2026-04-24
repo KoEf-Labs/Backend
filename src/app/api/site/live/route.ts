@@ -5,6 +5,33 @@ import { ProjectStatus } from "@prisma/client";
 import { trackView } from "@/src/lib/site-views";
 import { getClientIp } from "@/src/lib/rate-limit";
 import { getMaintenanceState, maintenanceHtml } from "@/src/lib/maintenance";
+import { getEffectiveAccess } from "@/src/lib/subscriptions";
+
+// How many sections a Free-tier site may publish. Anything beyond is
+// silently hidden from the rendered HTML so the public site stays
+// within the tier the user is currently paying for (or not).
+const FREE_SECTION_LIMIT = 3;
+
+/**
+ * Walks publishedContent and truncates the "sections" array (any level)
+ * to FREE_SECTION_LIMIT. Themes that don't use a top-level sections
+ * array are left untouched — this only affects sites that opt into the
+ * shared schema, which is all of ours at the time of writing. The copy
+ * is shallow for the root object and deep-ish for sections so we don't
+ * mutate the Prisma result.
+ */
+function truncateForFreeTier(
+  content: Record<string, unknown>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...content };
+  if (Array.isArray(out.sections) && out.sections.length > FREE_SECTION_LIMIT) {
+    out.sections = (out.sections as unknown[]).slice(0, FREE_SECTION_LIMIT);
+  }
+  if (Array.isArray(out.pages) && out.pages.length > FREE_SECTION_LIMIT) {
+    out.pages = (out.pages as unknown[]).slice(0, FREE_SECTION_LIMIT);
+  }
+  return out;
+}
 
 const domainService = new DomainService();
 const renderService = new RenderService();
@@ -69,11 +96,27 @@ export async function GET(req: NextRequest) {
   // Track view (non-blocking, Redis counter)
   trackView(project.id, getClientIp(req)).catch(() => {});
 
+  // Enforce the owner's current tier. If their subscription expired
+  // (even though the site is still PUBLISHED in the DB) we clip the
+  // published content down to Free limits before handing it to the
+  // renderer. Custom domains are forced off by the rendering layer as
+  // well via nginx — this only affects what content reaches the page.
+  let content = project.publishedContent as Record<string, unknown>;
+  try {
+    const access = await getEffectiveAccess(project.userId);
+    if (access.tier === "FREE") {
+      content = truncateForFreeTier(content);
+    }
+  } catch {
+    // Fail open: serve whatever was published rather than 500'ing the
+    // public site if the access lookup has a hiccup.
+  }
+
   // Render
   try {
     const result = await renderService.renderTheme({
       theme: project.theme,
-      content: project.publishedContent as Record<string, unknown>,
+      content,
     });
 
     return new NextResponse(result.html, {
