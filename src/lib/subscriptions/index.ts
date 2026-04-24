@@ -34,6 +34,27 @@ export async function syncSubscription(
     );
   }
 
+  // Stamp the grace window when the row transitions into a state that
+  // needs one. Only set it on the edge (was non-grace → now grace) —
+  // if the row is already PAST_DUE we leave the stamp alone so the
+  // clock doesn't reset on every webhook during the grace window.
+  const needsGrace =
+    (verified.status === "PAST_DUE" || verified.status === "CANCELED") &&
+    (!existing || (existing.status !== "PAST_DUE" && existing.status !== "CANCELED"));
+
+  let graceEndsAt: Date | null | undefined;
+  if (needsGrace) {
+    const settings = await getSubscriptionSettings();
+    graceEndsAt = new Date(
+      Date.now() + settings.gracePeriodDays * 24 * 60 * 60 * 1000
+    );
+  } else if (verified.status === "ACTIVE" || verified.status === "TRIALING") {
+    // Successful renewal / reactivation — clear any pending grace.
+    graceEndsAt = null;
+  } else if (verified.status === "EXPIRED" || verified.status === "REFUNDED") {
+    graceEndsAt = null;
+  }
+
   const data = {
     userId,
     planId: verified.plan.id,
@@ -44,6 +65,7 @@ export async function syncSubscription(
     currentPeriodEnd: verified.currentPeriodEnd,
     canceledAt: verified.canceledAt ?? null,
     refundedAt: verified.refundedAt ?? null,
+    ...(graceEndsAt !== undefined ? { graceEndsAt } : {}),
     providerMeta: (verified.providerMeta as object) ?? undefined,
   };
 
@@ -67,19 +89,31 @@ export async function syncSubscription(
 
 /**
  * Pick the best active subscription for this user. "Best" = highest
- * tier (BUSINESS > PRO > FREE) among those still within their period.
+ * tier (BUSINESS > PRO > FREE) among those still within their period
+ * or within their grace window (PAST_DUE / CANCELED users keep tier
+ * until graceEndsAt).
  *
- * Returns a synthetic FREE row when nothing is active — the caller can
- * treat it uniformly as "your current access".
+ * Returns a synthetic FREE row when nothing is active.
  */
 export async function getEffectiveAccess(userId: string) {
   const now = new Date();
   const rows = await prisma.subscription.findMany({
     where: {
       userId,
-      currentPeriodEnd: { gt: now },
-      status: { in: ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELED"] },
       refundedAt: null,
+      OR: [
+        // Happy path — currently paid for.
+        {
+          status: { in: ["ACTIVE", "TRIALING"] },
+          currentPeriodEnd: { gt: now },
+        },
+        // Failed renewal / user canceled — tier sticks around while
+        // inside the admin-configured grace window.
+        {
+          status: { in: ["PAST_DUE", "CANCELED"] },
+          graceEndsAt: { gt: now },
+        },
+      ],
     },
     include: { plan: true },
     orderBy: { currentPeriodEnd: "desc" },
@@ -96,7 +130,6 @@ export async function getEffectiveAccess(userId: string) {
     };
   }
 
-  // Highest tier wins; ties broken by latest period end.
   const order = { BUSINESS: 2, PRO: 1, FREE: 0 };
   rows.sort((a, b) => {
     const dt = order[b.plan.tier] - order[a.plan.tier];
@@ -109,4 +142,129 @@ export async function getEffectiveAccess(userId: string) {
     plan: rows[0].plan,
     subscription: rows[0],
   };
+}
+
+/**
+ * Fetch the single app-wide subscription settings row, creating it with
+ * defaults if it doesn't exist yet. Always returns a row so callers
+ * don't need to null-check.
+ */
+export async function getSubscriptionSettings() {
+  const row = await prisma.subscriptionSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default" },
+  });
+  return row;
+}
+
+/**
+ * Sweep — meant to be called by a cron. Moves subscriptions whose
+ * billing period ended into EXPIRED (or grace if applicable), and
+ * drops grace-window PAST_DUE/CANCELED rows into EXPIRED once their
+ * graceEndsAt has passed. Idempotent.
+ */
+export async function sweepExpiredSubscriptions() {
+  const now = new Date();
+  const settings = await getSubscriptionSettings();
+
+  // 1. Paid periods that ended without a renewal payload: flip to
+  //    PAST_DUE and start the grace clock. If webhook already put them
+  //    in PAST_DUE, currentPeriodEnd is still in the past so we'd pick
+  //    them up here too — use graceEndsAt absence as the "not yet
+  //    grace'd" signal so we don't re-stamp.
+  const toPastDue = await prisma.subscription.findMany({
+    where: {
+      status: { in: ["ACTIVE", "TRIALING"] },
+      currentPeriodEnd: { lte: now },
+      refundedAt: null,
+    },
+    select: { id: true },
+  });
+  if (toPastDue.length > 0) {
+    const graceEndsAt = new Date(
+      now.getTime() + settings.gracePeriodDays * 24 * 60 * 60 * 1000
+    );
+    await prisma.subscription.updateMany({
+      where: { id: { in: toPastDue.map((r) => r.id) } },
+      data: { status: "PAST_DUE", graceEndsAt },
+    });
+  }
+
+  // 2. Rows whose grace already ended → EXPIRED (no more access).
+  const toExpire = await prisma.subscription.updateMany({
+    where: {
+      status: { in: ["PAST_DUE", "CANCELED"] },
+      graceEndsAt: { lte: now },
+    },
+    data: { status: "EXPIRED" },
+  });
+
+  // 3. CANCELED rows that simply ran out their paid period (graceEndsAt
+  //    null means cancel-at-period-end with no added grace) → EXPIRED.
+  const canceledExpired = await prisma.subscription.updateMany({
+    where: {
+      status: "CANCELED",
+      graceEndsAt: null,
+      currentPeriodEnd: { lte: now },
+    },
+    data: { status: "EXPIRED" },
+  });
+
+  logger.info("subscription_sweep", {
+    pastDue: toPastDue.length,
+    expired: toExpire.count + canceledExpired.count,
+  });
+
+  return {
+    pastDue: toPastDue.length,
+    expired: toExpire.count + canceledExpired.count,
+  };
+}
+
+/**
+ * Admin action — extend the current period by N days. Use for comping
+ * an affected user or honouring a manual refund reversal. Also clears
+ * any grace window and sets status back to ACTIVE.
+ */
+export async function extendSubscription(
+  subscriptionId: string,
+  days: number
+) {
+  const sub = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+  });
+  if (!sub) throw new SubscriptionError("Subscription not found", 404);
+
+  const base = sub.currentPeriodEnd > new Date() ? sub.currentPeriodEnd : new Date();
+  const newEnd = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+
+  return prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: {
+      currentPeriodEnd: newEnd,
+      status: "ACTIVE",
+      graceEndsAt: null,
+      canceledAt: null,
+    },
+  });
+}
+
+/**
+ * Admin action — mark canceled. Respects the grace period from
+ * settings so the user keeps their tier until grace runs out.
+ */
+export async function cancelSubscriptionNow(subscriptionId: string) {
+  const settings = await getSubscriptionSettings();
+  const graceEndsAt = new Date(
+    Date.now() + settings.gracePeriodDays * 24 * 60 * 60 * 1000
+  );
+  return prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: {
+      status: "CANCELED",
+      canceledAt: new Date(),
+      graceEndsAt,
+    },
+  });
 }
