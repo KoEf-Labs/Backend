@@ -96,3 +96,16 @@ export const getAccountDeleteCode = (userId: string) =>
 
 export const clearAccountDeleteCode = (userId: string) =>
   clearCode(ACCOUNT_PREFIX, userId);
+
+// ── Password change ─────────────────────────────────────────────────
+
+const PWD_CHANGE_PREFIX = "pwd:change:";
+
+export const setPasswordChangeCode = (userId: string, code: string) =>
+  setCode(PWD_CHANGE_PREFIX, userId, userId, code);
+
+export const getPasswordChangeCode = (userId: string) =>
+  getCode(PWD_CHANGE_PREFIX, userId);
+
+export const clearPasswordChangeCode = (userId: string) =>
+  clearCode(PWD_CHANGE_PREFIX, userId);
