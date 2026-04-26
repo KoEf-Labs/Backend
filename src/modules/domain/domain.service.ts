@@ -81,12 +81,35 @@ export class DomainService {
     return { valid: true };
   }
 
-  async isSubdomainAvailable(subdomain: string): Promise<boolean> {
+  /**
+   * Subdomain availability check. Treats the *current* caller's DRAFT
+   * projects as "available" — those are the user's own abandoned
+   * wizard runs, and forcing them to pick a new name when they back
+   * out and try a different theme is a terrible UX. Other users'
+   * projects, and the caller's own PUBLISHED/PENDING ones, still
+   * count as taken.
+   *
+   * The caller is expected to clean up the stale DRAFT before
+   * inserting a new project (see ProjectService.create).
+   */
+  async isSubdomainAvailable(
+    subdomain: string,
+    callerUserId?: string,
+  ): Promise<boolean> {
     const existing = await prisma.project.findUnique({
       where: { subdomain: subdomain.trim().toLowerCase() },
-      select: { id: true },
+      select: { id: true, userId: true, status: true, deletedAt: true },
     });
-    return !existing;
+    if (!existing) return true;
+    if (existing.deletedAt) return true;
+    if (
+      callerUserId &&
+      existing.userId === callerUserId &&
+      existing.status === "DRAFT"
+    ) {
+      return true;
+    }
+    return false;
   }
 
   // --- Custom Domain ---
@@ -99,12 +122,30 @@ export class DomainService {
     return { valid: true };
   }
 
-  async isCustomDomainAvailable(domain: string): Promise<boolean> {
+  /**
+   * Custom domain availability — same draft-recycling rule as
+   * isSubdomainAvailable: the caller's own DRAFT projects don't count
+   * as taken, so abandoning the wizard with a custom domain doesn't
+   * lock them out of trying a different theme.
+   */
+  async isCustomDomainAvailable(
+    domain: string,
+    callerUserId?: string,
+  ): Promise<boolean> {
     const existing = await prisma.project.findUnique({
       where: { customDomain: domain.trim().toLowerCase() },
-      select: { id: true },
+      select: { id: true, userId: true, status: true, deletedAt: true },
     });
-    return !existing;
+    if (!existing) return true;
+    if (existing.deletedAt) return true;
+    if (
+      callerUserId &&
+      existing.userId === callerUserId &&
+      existing.status === "DRAFT"
+    ) {
+      return true;
+    }
+    return false;
   }
 
   // --- Verification ---

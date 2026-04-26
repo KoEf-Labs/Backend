@@ -132,7 +132,7 @@ export async function handlePost(req: NextRequest) {
     if (subdomain) {
       const validation = domainService.validateSubdomain(subdomain);
       if (!validation.valid) return error(validation.error!, 400);
-      const available = await domainService.isSubdomainAvailable(subdomain);
+      const available = await domainService.isSubdomainAvailable(subdomain, userId);
       if (!available) return error("This subdomain is already taken", 409);
     }
 
@@ -141,7 +141,7 @@ export async function handlePost(req: NextRequest) {
     if (customDomain) {
       const validation = domainService.validateCustomDomain(customDomain);
       if (!validation.valid) return error(validation.error!, 400);
-      const available = await domainService.isCustomDomainAvailable(customDomain);
+      const available = await domainService.isCustomDomainAvailable(customDomain, userId);
       if (!available) return error("This domain is already in use", 409);
     }
 

@@ -157,6 +157,31 @@ export class ProjectService {
       input.contentJson = sanitized as Prisma.InputJsonValue;
     }
 
+    // Recycle stale DRAFTs from the same user that hold the
+    // subdomain/custom domain we're about to claim. The unique
+    // constraint would otherwise reject the insert even though the
+    // owner has every right to reclaim their own abandoned wizard
+    // run. We hard-delete (not soft) — DRAFTs were never published so
+    // there's no public artefact to preserve.
+    if (input.subdomain) {
+      await prisma.project.deleteMany({
+        where: {
+          userId: input.userId,
+          subdomain: input.subdomain,
+          status: ProjectStatus.DRAFT,
+        },
+      });
+    }
+    if (input.customDomain) {
+      await prisma.project.deleteMany({
+        where: {
+          userId: input.userId,
+          customDomain: input.customDomain,
+          status: ProjectStatus.DRAFT,
+        },
+      });
+    }
+
     return prisma.project.create({
       data: {
         userId: input.userId,
