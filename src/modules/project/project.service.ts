@@ -46,6 +46,16 @@ async function assertThemeAccess(userId: string, theme: string): Promise<void> {
     where: { userId_themeName: { userId, themeName: theme } },
   });
   if (ent) return;
+  // Pro / Business plans bundle every premium theme — no per-theme
+  // entitlement required.
+  try {
+    const { getEffectiveAccess } = await import("@/src/lib/subscriptions");
+    const access = await getEffectiveAccess(userId);
+    if (access.tier === "PRO" || access.tier === "BUSINESS") return;
+  } catch {
+    // fall through — let the user hit the upgrade prompt rather than
+    // 500ing the editor save when the access lookup misbehaves.
+  }
   // Admins can use any theme for QA / demos.
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -53,7 +63,7 @@ async function assertThemeAccess(userId: string, theme: string): Promise<void> {
   });
   if (user?.role === "ADMIN") return;
   throw new ServiceError(
-    "This is a premium theme — purchase required",
+    "Bu tema Pro veya Business pakete dahil — paketini yükselt.",
     402 // Payment Required
   );
 }

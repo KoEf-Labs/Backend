@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ThemeService, ThemeError } from "./theme.service";
 import { getUserId } from "@/src/lib/auth";
+import { getEffectiveAccess } from "@/src/lib/subscriptions";
 
 const service = new ThemeService();
 
@@ -35,26 +36,44 @@ export async function handleListThemes(req?: NextRequest) {
     // Filter out admin-disabled themes so mobile users don't see them
     const filtered = themes.filter((t) => byName.get(t.name)?.enabled !== false);
 
-    // If a user is authenticated, pull their entitlements once.
+    // If a user is authenticated, pull their entitlements + effective
+    // subscription tier so we can decide which premium themes the user
+    // already has access to (per-theme purchase OR a paid plan).
     const userId = req ? getUserId(req) : null;
     const owned = new Set<string>();
+    let planUnlocksPremium = false;
     if (userId) {
-      const ent = await prisma.userThemeEntitlement.findMany({
-        where: { userId },
-        select: { themeName: true },
-      });
+      const [ent, access] = await Promise.all([
+        prisma.userThemeEntitlement.findMany({
+          where: { userId },
+          select: { themeName: true },
+        }),
+        getEffectiveAccess(userId).catch(() => null),
+      ]);
       for (const e of ent) owned.add(e.themeName);
+      // Pro and Business include all premium themes — see plan config.
+      planUnlocksPremium =
+        access?.tier === "PRO" || access?.tier === "BUSINESS";
     }
 
     const enriched = filtered.map((t) => {
       const cfg = byName.get(t.name);
       const isPremium = cfg?.isPremium ?? false;
+      const ownedByPurchase = isPremium && owned.has(t.name);
+      const ownedByPlan = isPremium && planUnlocksPremium;
       return {
         ...t,
         isPremium,
         priceTry: cfg?.priceTry ?? null,
         priceUsd: cfg?.priceUsd ?? null,
-        owned: isPremium ? owned.has(t.name) : true,
+        // owned = "user can pick this without paying anything more".
+        // True for free themes, paid-once themes, and any premium theme
+        // when the user is on a plan that bundles them.
+        owned: !isPremium || ownedByPurchase || ownedByPlan,
+        // includedInPlan tells the client whether the unlock came from
+        // the subscription (vs an entitlement). Useful when the UI wants
+        // to phrase the upsell as "Pro ile dahil" instead of "satın al".
+        includedInPlan: ownedByPlan,
       };
     });
 
