@@ -97,7 +97,7 @@ const seeds: PlanSeed[] = [
     tier: "PRO",
     interval: "YEARLY",
     name: "Pro · Yıllık",
-    description: "Yıllık ödeyince 2 ay bedava — en çok tercih edilen.",
+    description: "Yıllık ödeyince ciddi tasarruf — en çok tercih edilen.",
     features: proFeatures,
     priceUsd: 1999, // $19.99
     priceEur: 1999,
@@ -120,7 +120,7 @@ const seeds: PlanSeed[] = [
     tier: "BUSINESS",
     interval: "YEARLY",
     name: "Business · Yıllık",
-    description: "Tüm Business özellikleri + 2 ay bedava.",
+    description: "Tüm Business özellikleri — yıllık ödeyince avantajlı.",
     features: businessFeatures,
     priceUsd: 5499, // $54.99
     priceEur: 5499,
