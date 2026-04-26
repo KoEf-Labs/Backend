@@ -63,9 +63,15 @@ export class ThemeService {
 
     if (!fs.existsSync(THEMES_DIR)) return [];
 
+    // "shared" lives in the themes directory but isn't a real theme —
+    // it holds components imported by every theme layout. Skip any
+    // reserved name and require an actual layout.tsx so future utility
+    // folders don't leak into the picker either.
+    const RESERVED = new Set<string>(["shared"]);
     const themes = fs
       .readdirSync(THEMES_DIR, { withFileTypes: true })
       .filter((d) => d.isDirectory())
+      .filter((d) => !RESERVED.has(d.name))
       .map((d) => {
         const dir = path.join(THEMES_DIR, d.name);
         return {
@@ -75,6 +81,7 @@ export class ThemeService {
           hasLayout: fs.existsSync(path.join(dir, "layout.tsx")),
         };
       })
+      .filter((t) => t.hasLayout)
       .sort((a, b) => a.name.localeCompare(b.name));
 
     themeListCache.set("all", themes);
