@@ -32,6 +32,9 @@ const PUBLIC_ROUTES = [
   // Authenticated callers still get extra fields (activeTier) when the
   // route reads their JWT, but entry is allowed without one.
   "/api/plans",
+  // Legal pages (terms of service, privacy policy) — public so signup
+  // and unauthenticated browsers can render the modal.
+  "/api/legal",
   // Store webhooks — Apple/Google post with their own signing, not a Bearer.
   "/api/subscriptions/webhook",
   // Internal service-to-service (AdminBackend → Backend) — auth handled per-route via x-service-token

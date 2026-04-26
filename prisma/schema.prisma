@@ -63,6 +63,11 @@ model User {
   passportNo        String? // foreign citizens
   companyName       String?
   companyTaxId      String? // TR: 10 digits
+  // Terms of service acceptance — required at registration. Stamped
+  // with the version they accepted so we can re-prompt when terms
+  // change. acceptedTermsAt is null until the user clicks the box.
+  acceptedTermsAt      DateTime?
+  acceptedTermsVersion String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   projects          Project[]

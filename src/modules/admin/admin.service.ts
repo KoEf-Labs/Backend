@@ -79,6 +79,7 @@ export class AdminService {
           // list payload stays small.
           profileCompleted: true,
           accountType: true,
+          acceptedTermsAt: true,
           _count: { select: { projects: { where: { deletedAt: null } } } },
         },
       }),
@@ -126,6 +127,8 @@ export class AdminService {
         passportNo: true,
         companyName: true,
         companyTaxId: true,
+        acceptedTermsAt: true,
+        acceptedTermsVersion: true,
         projects: {
           where: { deletedAt: null },
           select: {
