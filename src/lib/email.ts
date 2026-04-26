@@ -147,6 +147,17 @@ export async function sendDeleteConfirmationEmail(email: string, code: string, p
   );
 }
 
+export async function sendAccountDeleteConfirmationEmail(email: string, code: string) {
+  await provider.sendEmail(
+    email,
+    "Confirm account deletion",
+    `<p>You requested to permanently delete your Sitevra account.</p>
+     <p>Your confirmation code is: <strong>${code}</strong></p>
+     <p>This code expires in 10 minutes. After confirmation your account, sites and subscriptions will be removed and cannot be restored.</p>
+     <p>If you didn't request this, ignore this email and consider changing your password — someone may have your credentials.</p>`
+  );
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${process.env.BASE_URL || "http://localhost:3000"}/reset-password?token=${token}`;
   await provider.sendEmail(
