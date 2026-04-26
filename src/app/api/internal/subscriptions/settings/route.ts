@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireServiceToken } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { logger } from "@/src/lib/logger";
-import { getSubscriptionSettings } from "@/src/lib/subscriptions";
+import {
+  getSubscriptionSettings,
+  invalidateSubscriptionSettingsCache,
+} from "@/src/lib/subscriptions";
 
 /**
  * GET /api/internal/subscriptions/settings — returns the singleton
@@ -56,6 +59,7 @@ export async function PATCH(req: NextRequest) {
       update: data,
       create: { id: "default", ...data },
     });
+    invalidateSubscriptionSettingsCache();
 
     logger.info("admin_subscription_settings_updated", {
       adminEmail,

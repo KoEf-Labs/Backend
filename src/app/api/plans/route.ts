@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/src/lib/db";
 import { getUserId } from "@/src/lib/auth";
 import { getEffectiveAccess } from "@/src/lib/subscriptions";
 import { logger } from "@/src/lib/logger";
+import { getActivePlans } from "@/src/lib/plans-cache";
 
 /**
  * GET /api/plans
@@ -20,24 +20,7 @@ import { logger } from "@/src/lib/logger";
  */
 export async function GET(req: NextRequest) {
   try {
-    const plans = await prisma.plan.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }],
-      select: {
-        id: true,
-        tier: true,
-        interval: true,
-        name: true,
-        description: true,
-        features: true,
-        priceUsd: true,
-        priceEur: true,
-        priceTry: true,
-        applePriceId: true,
-        googlePriceId: true,
-        stripePriceId: true,
-      },
-    });
+    const plans = await getActivePlans();
 
     const userId = getUserId(req);
     let activeTier: "FREE" | "PRO" | "BUSINESS" = "FREE";
