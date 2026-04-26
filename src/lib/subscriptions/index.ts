@@ -9,9 +9,34 @@
  */
 import { prisma } from "@/src/lib/db";
 import { logger } from "@/src/lib/logger";
+import { MemoryCache } from "@/src/lib/cache";
 import { SubscriptionError, VerifiedPurchase } from "./types";
 
 export { SubscriptionError };
+
+type EffectiveAccess = Awaited<ReturnType<typeof loadEffectiveAccess>>;
+type SubscriptionSettingsRow = Awaited<
+  ReturnType<typeof prisma.subscriptionSettings.upsert>
+>;
+
+// Per-user effective-access cache. Public site renders call this on every
+// request to gate Free-tier section limits — a 60s TTL trades a tiny bit of
+// staleness for a big drop in DB pressure on hot sites. Invalidated on every
+// mutation that can change a user's tier (sync/extend/cancel/sweep).
+const accessCache = new MemoryCache<EffectiveAccess>(60, 5000);
+
+// Singleton settings — changes only via admin PATCH. 5-minute TTL is plenty.
+const settingsCache = new MemoryCache<SubscriptionSettingsRow>(300, 1);
+const SETTINGS_KEY = "default";
+
+export function invalidateAccessCache(userId?: string) {
+  if (userId) accessCache.invalidate(userId);
+  else accessCache.clear();
+}
+
+export function invalidateSubscriptionSettingsCache() {
+  settingsCache.invalidate(SETTINGS_KEY);
+}
 
 export async function syncSubscription(
   userId: string,
@@ -76,6 +101,8 @@ export async function syncSubscription(
       })
     : await prisma.subscription.create({ data });
 
+  invalidateAccessCache(userId);
+
   logger.info("subscription_synced", {
     userId,
     subscriptionId: sub.id,
@@ -96,6 +123,14 @@ export async function syncSubscription(
  * Returns a synthetic FREE row when nothing is active.
  */
 export async function getEffectiveAccess(userId: string) {
+  const cached = accessCache.get(userId);
+  if (cached) return cached;
+  const fresh = await loadEffectiveAccess(userId);
+  accessCache.set(userId, fresh);
+  return fresh;
+}
+
+async function loadEffectiveAccess(userId: string) {
   const now = new Date();
   const rows = await prisma.subscription.findMany({
     where: {
@@ -150,11 +185,14 @@ export async function getEffectiveAccess(userId: string) {
  * don't need to null-check.
  */
 export async function getSubscriptionSettings() {
+  const cached = settingsCache.get(SETTINGS_KEY);
+  if (cached) return cached;
   const row = await prisma.subscriptionSettings.upsert({
     where: { id: "default" },
     update: {},
     create: { id: "default" },
   });
+  settingsCache.set(SETTINGS_KEY, row);
   return row;
 }
 
@@ -211,6 +249,12 @@ export async function sweepExpiredSubscriptions() {
     data: { status: "EXPIRED" },
   });
 
+  // Sweep can change tier for any number of users — clear the whole
+  // access cache rather than re-querying who got affected.
+  if (toPastDue.length > 0 || toExpire.count > 0 || canceledExpired.count > 0) {
+    invalidateAccessCache();
+  }
+
   logger.info("subscription_sweep", {
     pastDue: toPastDue.length,
     expired: toExpire.count + canceledExpired.count,
@@ -239,7 +283,7 @@ export async function extendSubscription(
   const base = sub.currentPeriodEnd > new Date() ? sub.currentPeriodEnd : new Date();
   const newEnd = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
 
-  return prisma.subscription.update({
+  const updated = await prisma.subscription.update({
     where: { id: subscriptionId },
     data: {
       currentPeriodEnd: newEnd,
@@ -248,6 +292,8 @@ export async function extendSubscription(
       canceledAt: null,
     },
   });
+  invalidateAccessCache(updated.userId);
+  return updated;
 }
 
 /**
@@ -259,7 +305,7 @@ export async function cancelSubscriptionNow(subscriptionId: string) {
   const graceEndsAt = new Date(
     Date.now() + settings.gracePeriodDays * 24 * 60 * 60 * 1000
   );
-  return prisma.subscription.update({
+  const updated = await prisma.subscription.update({
     where: { id: subscriptionId },
     data: {
       status: "CANCELED",
@@ -267,4 +313,6 @@ export async function cancelSubscriptionNow(subscriptionId: string) {
       graceEndsAt,
     },
   });
+  invalidateAccessCache(updated.userId);
+  return updated;
 }

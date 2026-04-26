@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireServiceToken } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { logger } from "@/src/lib/logger";
+import { invalidatePlansCache } from "@/src/lib/plans-cache";
 
 /**
  * PATCH /api/internal/plans/:id
@@ -56,6 +57,7 @@ export async function PATCH(
     }
 
     const plan = await prisma.plan.update({ where: { id }, data });
+    invalidatePlansCache();
 
     await prisma.auditLog.create({
       data: {
