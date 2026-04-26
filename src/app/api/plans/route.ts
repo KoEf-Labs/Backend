@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { getUserId } from "@/src/lib/auth";
 import { getEffectiveAccess } from "@/src/lib/subscriptions";
+import { logger } from "@/src/lib/logger";
 
 /**
  * GET /api/plans
@@ -42,9 +43,20 @@ export async function GET(req: NextRequest) {
     let activeTier: "FREE" | "PRO" | "BUSINESS" = "FREE";
     let activeSubscription: unknown = null;
     if (userId) {
-      const access = await getEffectiveAccess(userId);
-      activeTier = access.tier;
-      activeSubscription = access.subscription;
+      // getEffectiveAccess can fail in dev if the SubscriptionSettings
+      // table or the FREE plan row hasn't been seeded yet. Don't block
+      // the pricing page over that — fall back to FREE and log loudly
+      // so the cause shows up in the server console.
+      try {
+        const access = await getEffectiveAccess(userId);
+        activeTier = access.tier;
+        activeSubscription = access.subscription;
+      } catch (innerErr) {
+        logger.error("plans_effective_access_failed", {
+          userId,
+          error: innerErr instanceof Error ? innerErr.message : String(innerErr),
+        });
+      }
     }
 
     return NextResponse.json({
@@ -54,6 +66,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed";
+    logger.error("plans_route_failed", { error: message });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
