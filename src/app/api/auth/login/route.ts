@@ -55,6 +55,20 @@ export async function POST(req: Request) {
     );
   }
 
+  // Deleted accounts can't log in. Apple Guideline 5.1.1.v requires
+  // we also surface a separate error so the UI can offer "create a
+  // new account" instead of the generic suspended message.
+  if (user.deletedAt) {
+    logger.auth("login_failed", { email, userId: user.id, reason: "deleted", ip });
+    return NextResponse.json(
+      {
+        error: "This account has been deleted.",
+        deleted: true,
+      },
+      { status: 403 }
+    );
+  }
+
   // Suspended users can't log in at all
   if (user.suspended) {
     logger.auth("login_failed", { email, userId: user.id, reason: "suspended", ip });

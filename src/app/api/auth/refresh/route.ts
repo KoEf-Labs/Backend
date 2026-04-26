@@ -66,6 +66,18 @@ export async function POST(req: Request) {
     );
   }
 
+  // Deleted accounts cannot regain access. The DELETE /api/auth/me
+  // handler clears all refresh tokens, but a stolen token from before
+  // deletion would still find a row here — we double-check the user's
+  // tombstone and refuse.
+  if (storedToken.user.deletedAt) {
+    await prisma.refreshToken.deleteMany({ where: { userId: storedToken.userId } });
+    return NextResponse.json(
+      { error: "Account deleted", deleted: true },
+      { status: 403 }
+    );
+  }
+
   // Token rotation in a transaction to prevent race conditions.
   // Delete old → check family → create new happens atomically.
   const familyId = storedToken.familyId;

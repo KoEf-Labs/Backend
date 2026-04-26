@@ -68,6 +68,13 @@ model User {
   // change. acceptedTermsAt is null until the user clicks the box.
   acceptedTermsAt      DateTime?
   acceptedTermsVersion String?
+  // Account deletion lifecycle (Apple Guideline 5.1.1.v + KVKK).
+  // deletedAt is stamped when the user requests deletion from the app.
+  // While set, the user can no longer log in, the JWT middleware
+  // refuses tokens, projects are taken offline, and the row is hard-
+  // deleted by the daily sweep after the retention window
+  // (default 30 days).
+  deletedAt         DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   projects          Project[]
@@ -79,6 +86,7 @@ model User {
   @@index([suspended])
   @@index([createdAt])
   @@index([profileCompleted])
+  @@index([deletedAt])
 }
 
 enum AccountType {
