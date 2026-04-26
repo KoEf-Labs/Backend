@@ -147,6 +147,20 @@ export async function sendDeleteConfirmationEmail(email: string, code: string, p
   );
 }
 
+export async function sendPasswordChangeConfirmationEmail(email: string, code: string) {
+  await provider.sendEmail(
+    email,
+    "Confirm password change",
+    `<p>You requested to change your Sitevra password.</p>
+     <p>Your confirmation code is: <strong>${code}</strong></p>
+     <p>This code expires in 10 minutes. After confirmation all active
+     sessions will be signed out and you'll need to log in again with
+     the new password.</p>
+     <p>If you didn't request this, ignore this email and consider
+     resetting your password — someone may have your credentials.</p>`
+  );
+}
+
 export async function sendAccountDeleteConfirmationEmail(email: string, code: string) {
   await provider.sendEmail(
     email,
