@@ -131,6 +131,7 @@ export async function DELETE(req: NextRequest) {
     const userId = requireAuth(req);
     const body = await req.json().catch(() => ({}));
     const password = typeof body?.password === "string" ? body.password : null;
+    const code = typeof body?.code === "string" ? body.code : null;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -148,6 +149,27 @@ export async function DELETE(req: NextRequest) {
     if (user.deletedAt) {
       // Already deleted — idempotent.
       return NextResponse.json({ deleted: true });
+    }
+
+    // Email confirmation code — required for everyone (password and
+    // OAuth accounts alike). Same flow as project deletion: client
+    // calls POST /api/auth/me/request-delete, we mail a 6-digit code,
+    // they paste it back into DELETE.
+    const { getAccountDeleteCode, clearAccountDeleteCode } = await import(
+      "@/src/lib/delete-confirmation"
+    );
+    const stored = await getAccountDeleteCode(userId);
+    if (!stored) {
+      return NextResponse.json(
+        { error: "Please request a deletion code first" },
+        { status: 400 }
+      );
+    }
+    if (!code || stored.code !== code) {
+      return NextResponse.json(
+        { error: "Invalid confirmation code" },
+        { status: 400 }
+      );
     }
 
     // Password gate. We treat a non-empty passwordHash as "this is a
@@ -175,6 +197,11 @@ export async function DELETE(req: NextRequest) {
         );
       }
     }
+
+    // Burn the one-time code so it can't be replayed. Do this before
+    // the destructive transaction so a transient transaction failure
+    // doesn't lock the user out of retrying with a fresh code.
+    await clearAccountDeleteCode(userId);
 
     const now = new Date();
     // Reserve the email so the same address can sign up again with a
