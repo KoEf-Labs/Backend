@@ -28,12 +28,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { email, password, name, phone } = body;
+  const { email, password, name, phone, acceptedTerms, termsVersion } = body;
 
   // Validation
   if (!email || !password || !name) {
     return NextResponse.json(
       { error: "Email, password and name are required" },
+      { status: 400 }
+    );
+  }
+
+  // Terms of service must be explicitly accepted at signup. The client
+  // sends `acceptedTerms: true` together with the version string they
+  // saw — we stamp both so we can re-prompt when the version changes.
+  if (acceptedTerms !== true) {
+    return NextResponse.json(
+      { error: "You must accept the user agreement to register" },
       { status: 400 }
     );
   }
@@ -94,6 +104,11 @@ export async function POST(req: Request) {
       passwordHash,
       name,
       phone: phone || null,
+      acceptedTermsAt: new Date(),
+      acceptedTermsVersion:
+        typeof termsVersion === "string" && termsVersion.length <= 20
+          ? termsVersion
+          : "1.0",
     },
   });
 
